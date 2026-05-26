@@ -1665,8 +1665,7 @@ function parseMT5CSV(text,fname){
 function parseMT5HTML(html,fname){
   const parser=new DOMParser();const doc=parser.parseFromString(html,'text/html');const tables=doc.querySelectorAll('table');if(!tables.length){showProcessing(false);return 0;}
   
-  // ── CUSTOM FORMAT: TradeJournal HTML (índice fijo) ──
-  // Col: 0=Apertura 1=Cierre 2=Ticket 3=Símbolo 4=Tipo 5=Volumen 6=Entrada 7=SL 8=TP 9=Salida 10=Comisión 11=Swap 12=Beneficio 13=Comentario
+  // ── CUSTOM FORMAT: TradeJournal HTML (Apertura/Cierre/Simbolo/Tipo/Beneficio) ──
   const firstTable=tables[0];
   const firstHeaders=Array.from(firstTable.querySelectorAll('thead th')).map(th=>normH(th.textContent));
   const hasApertura=firstHeaders.some(h=>h.includes('apertura'));
@@ -1676,26 +1675,36 @@ function parseMT5HTML(html,fname){
     const customParsed=[];
     rows.forEach(row=>{
       const cells=Array.from(row.querySelectorAll('td'));
-      if(cells.length<10)return;
+      if(cells.length<9)return;
       const getText=i=>cells[i]?cells[i].textContent.trim():'';
+      // Fixed columns: 0=fecha_open, 1=ticket, 2=symbol, 3=tipo, 4=size, 5=entrada
       const rawFecha=getText(0);
-      const symbol=getText(3).toUpperCase();
-      const tipoText=getText(4).toLowerCase();
-      const size=parseNum(getText(5));
-      const entrada=parseNum(getText(6));
-      const sl=parseNum(getText(7));
-      const tp=parseNum(getText(8));
-      const salida=parseNum(getText(9));
-      const comision=parseNum(getText(10));
-      const pnlBruto=parseNum(getText(12).replace(/[^0-9.\-\+]/g,''));
-      const pnl=pnlBruto; // already net in this format
-      if(!symbol||symbol.length<2)return;
-      const dir=tipoText.includes('short')?'Short':'Long';
-      // Parse "YYYY-MM-DD HH:MM" exactly
+      const symbol=getText(2).toUpperCase();
+      const tipoText=getText(3).toLowerCase();
+      const size=parseNum(getText(4));
+      const entrada=parseNum(getText(5));
+      if(!symbol||symbol.length<2||symbol.match(/^[0-9.,$-]+$/))return;
+      if(tipoText!=='buy'&&tipoText!=='sell'&&!tipoText.includes('long')&&!tipoText.includes('short'))return;
+      // Find close date index (first cell after index 6 that matches date pattern)
+      let closeDateIdx=-1;
+      for(let i=6;i<cells.length;i++){
+        const v=getText(i);
+        if(/^\d{4}[.\-]\d{2}[.\-]\d{2}/.test(v)){closeDateIdx=i;break;}
+      }
+      // SL and TP are between entrada and closeDate
+      let sl=0,tp=0;
+      if(closeDateIdx===8){sl=parseNum(getText(6));tp=parseNum(getText(7));}
+      else if(closeDateIdx===7){sl=parseNum(getText(6));}
+      // After closeDate: salida, comision, swap, pnl
+      const salida=closeDateIdx>=0?parseNum(getText(closeDateIdx+1)):0;
+      const comision=closeDateIdx>=0?parseNum(getText(closeDateIdx+2)):0;
+      const pnl=cells.length>0?parseNum(getText(cells.length-1)):0;
+      const dir=tipoText.includes('sell')||tipoText.includes('short')?'Short':'Long';
+      // Parse date formats: YYYY.MM.DD HH:MM:SS or YYYY-MM-DD HH:MM
       let fecha=new Date().toISOString().slice(0,10),hora='00:00';
       if(rawFecha){
-        const parts=rawFecha.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
-        if(parts){fecha=parts[1];hora=parts[2];}
+        const m=rawFecha.match(/(\d{4})[.\-](\d{2})[.\-](\d{2})\s+(\d{2}):(\d{2})/);
+        if(m){fecha=`${m[1]}-${m[2]}-${m[3]}`;hora=`${m[4]}:${m[5]}`;}
       }
       const hNum=parseInt(hora.split(':')[0]);
       let sesion='New York';
@@ -1703,7 +1712,7 @@ function parseMT5HTML(html,fname){
       else if(hNum>=7&&hNum<12)sesion='London';
       else if(hNum>=12&&hNum<17)sesion='New York';
       else sesion='London/NY';
-      const forexPairs=['EUR','GBP','USD','JPY','CHF','AUD','NZD','CAD','XAU','XAG','NZD'];
+      const forexPairs=['EUR','GBP','USD','JPY','CHF','AUD','NZD','CAD','XAU','XAG'];
       const isForex=forexPairs.some(c=>symbol.includes(c));
       customParsed.push({
         id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
