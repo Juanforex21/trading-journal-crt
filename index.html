@@ -608,6 +608,7 @@ tbody tr:last-child td{border-bottom:none}
       <i class="fa fa-arrow-right-to-bracket"></i> Iniciar sesión
     </button>
     <div id="login-forgot" style="text-align:center;font-size:12px;color:var(--text2);cursor:pointer;margin-top:-8px" onclick="doForgot()">¿Olvidaste tu contraseña? <span style="color:var(--green)">Recuperar</span></div>
+    <div id="firebase-status" style="font-size:11px;color:var(--amber);text-align:center;margin-top:-4px"><i class="fa fa-rotate fa-spin"></i> Conectando con Firebase...</div>
     <div class="login-footer">🔒 Acceso privado · Solo usuarios autorizados</div>
   </div>
 </div>
@@ -702,6 +703,9 @@ window._fbSignOut=signOut;
 window._fbResetPwd=sendPasswordResetEmail;
 window._firebaseReady=true;
 console.log("🔥 Firebase listo");
+// Update login UI indicator
+const fbStatusEl=document.getElementById('firebase-status');
+if(fbStatusEl){fbStatusEl.innerHTML='<i class="fa fa-check-circle" style="color:var(--green)"></i> <span style="color:var(--green)">Firebase conectado</span>';setTimeout(()=>{if(fbStatusEl)fbStatusEl.style.display='none';},2500);}
 // Auth state listener
 onAuthStateChanged(_auth,(user)=>{
   if(user){
@@ -1778,16 +1782,34 @@ async function doLogin(){
   const pass=document.getElementById('login-pass').value;
   const errEl=document.getElementById('login-error');
   const btn=document.getElementById('login-btn');
+  errEl.classList.remove('show');
+  errEl.style.background='';errEl.style.borderColor='';errEl.style.color='';
+
   if(!email||!pass){errEl.textContent='Por favor ingresa tu correo y contraseña.';errEl.classList.add('show');return;}
-  btn.textContent='Iniciando sesión...';btn.disabled=true;
+
+  // Verificar que Firebase cargó antes de intentar login
+  if(!window._firebaseReady||!window._fbSignIn||!window._auth){
+    errEl.textContent='Firebase aún está cargando. Espera un momento y vuelve a intentarlo.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.innerHTML='<i class="fa fa-rotate fa-spin"></i> Iniciando sesión...';btn.disabled=true;
   try{
     await window._fbSignIn(window._auth,email,pass);
     errEl.classList.remove('show');
   } catch(e){
+    console.error('Login error:', e.code, e.message);
     let msg='Correo o contraseña incorrectos.';
-    if(e.code==='auth/too-many-requests')msg='Demasiados intentos. Espera unos minutos.';
-    if(e.code==='auth/user-not-found')msg='No existe una cuenta con ese correo.';
-    errEl.textContent=msg;errEl.classList.add('show');
+    if(e.code==='auth/too-many-requests')    msg='Demasiados intentos fallidos. Espera unos minutos o restablece tu contraseña.';
+    if(e.code==='auth/user-not-found')       msg='No existe ninguna cuenta con ese correo.';
+    if(e.code==='auth/wrong-password')       msg='Contraseña incorrecta. Verifica e intenta de nuevo.';
+    if(e.code==='auth/invalid-credential')   msg='Correo o contraseña incorrectos. Verifica tus datos.';
+    if(e.code==='auth/invalid-email')        msg='El formato del correo no es válido.';
+    if(e.code==='auth/user-disabled')        msg='Esta cuenta ha sido deshabilitada. Contacta al administrador.';
+    if(e.code==='auth/network-request-failed') msg='Sin conexión a internet. Verifica tu red e intenta de nuevo.';
+    errEl.textContent=msg;
+    errEl.classList.add('show');
   }
   btn.innerHTML='<i class="fa fa-arrow-right-to-bracket"></i> Iniciar sesión';btn.disabled=false;
 }
@@ -1795,13 +1817,21 @@ async function doLogin(){
 async function doForgot(){
   const email=document.getElementById('login-email').value.trim();
   const errEl=document.getElementById('login-error');
+  errEl.style.background='';errEl.style.borderColor='';errEl.style.color='';
   if(!email){errEl.textContent='Ingresa tu correo primero para recuperar la contraseña.';errEl.classList.add('show');return;}
+  if(!window._firebaseReady||!window._fbResetPwd||!window._auth){
+    errEl.textContent='Firebase aún está cargando. Espera un momento e intenta de nuevo.';errEl.classList.add('show');return;
+  }
   try{
     await window._fbResetPwd(window._auth,email);
     errEl.style.background='var(--green2)';errEl.style.borderColor='var(--green)';errEl.style.color='var(--green)';
-    errEl.textContent='✅ Correo de recuperación enviado. Revisa tu bandeja.';errEl.classList.add('show');
+    errEl.textContent='\u2705 Correo de recuperación enviado. Revisa tu bandeja de entrada.';errEl.classList.add('show');
   } catch(e){
-    errEl.textContent='No se pudo enviar el correo. Verifica la dirección.';errEl.classList.add('show');
+    console.error('Reset pwd error:',e.code,e.message);
+    let msg='No se pudo enviar el correo. Verifica la dirección ingresada.';
+    if(e.code==='auth/user-not-found') msg='No hay ninguna cuenta registrada con ese correo.';
+    if(e.code==='auth/invalid-email')  msg='El formato del correo no es válido.';
+    errEl.textContent=msg;errEl.classList.add('show');
   }
 }
 
