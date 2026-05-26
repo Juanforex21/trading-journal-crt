@@ -309,7 +309,7 @@ tbody tr:last-child td{border-bottom:none}
     <div class="nav-label" style="margin-top:12px">Análisis</div>
     <div class="nav-item" onclick="nav('analisis',this)"><i class="fa fa-chart-bar"></i> Estadísticas</div>
     <div class="nav-label" style="margin-top:12px">Estrategia</div>
-    <div class="nav-item" onclick="nav('crt',this)"><i class="fa fa-crosshairs"></i> Estrategia CRT</div>
+    <div class="nav-item" onclick="nav('crt',this)"><i class="fa fa-crosshairs"></i> Análisis pre entrada</div>
     <div class="nav-label" style="margin-top:12px">Importar</div>
     <div class="nav-item" onclick="nav('importar',this)"><i class="fa fa-file-import"></i> Importar datos</div>
     <div class="nav-label" style="margin-top:12px">Cuentas</div>
@@ -953,7 +953,7 @@ function nav(v,el){
   document.querySelectorAll('.view').forEach(i=>i.classList.remove('active'));
   const vEl=document.getElementById('view-'+v);
   if(vEl)vEl.classList.add('active');
-  const titles={dashboard:'Dashboard',nuevo:'Nueva Operación',historial:'Historial',calendario:'Calendario P&L',analisis:'Estadísticas',crt:'Estrategia CRT',importar:'Importar datos',cuentas:'Gestionar Cuentas'};
+  const titles={dashboard:'Dashboard',nuevo:'Nueva Operación',historial:'Historial',calendario:'Calendario P&L',analisis:'Estadísticas',crt:'Análisis pre entrada',importar:'Importar datos',cuentas:'Gestionar Cuentas'};
   document.getElementById('topbar-title').textContent=titles[v]||v;
   if(v==='dashboard')renderDashboard();
   if(v==='historial')renderHistorial();
@@ -1175,19 +1175,27 @@ function renderTradeDetailModal(t,td){
     </div>
     ${t.notas?`<div style="background:var(--bg3);border-radius:8px;padding:12px;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Notas</div>${t.notas}</div>`:''}
     
-    <!-- IMÁGENES -->
+    <!-- IMÁGENES POR TEMPORALIDAD -->
     <div style="margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px"><i class="fa fa-image"></i> Imágenes del trade</div>
-      <div id="td-images-${id}" class="image-gallery">${(td.images||[]).map((img,i)=>`<div style="position:relative"><img src="${img}" alt="Trade img"><button onclick="removeTradeImage('${id}',${i})" style="position:absolute;top:4px;right:4px;background:rgba(255,77,106,.9);border:none;border-radius:4px;color:#fff;cursor:pointer;padding:2px 6px;font-size:10px">✕</button></div>`).join('')}</div>
-      <div class="image-upload-zone" onclick="document.getElementById('td-img-input-${id}').click()">
-        <i class="fa fa-plus" style="font-size:20px;color:var(--text3);margin-bottom:6px;display:block"></i>
-        <div style="font-size:12px;color:var(--text3)">Agregar imagen (archivo o URL)</div>
-        <input type="file" id="td-img-input-${id}" accept="image/*" style="display:none" onchange="addTradeImageFile('${id}',this)">
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <input type="url" id="td-img-url-${id}" placeholder="URL de imagen (https://...)" style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px">
-        <button class="btn btn-ghost" onclick="addTradeImageURL('${id}')"><i class="fa fa-link"></i> Agregar</button>
-      </div>
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px"><i class="fa fa-image"></i> Imágenes por temporalidad</div>
+      ${['1D','12H','4H','1H','15m'].map(tf=>{
+        const imgKey='img_'+tf;
+        const imgData=(td[imgKey]||'');
+        return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:600;background:var(--bg4);padding:2px 8px;border-radius:6px;color:var(--text2);border:1px solid var(--border2)">${tf}</span>
+            <span style="font-size:12px;color:var(--text2)">${{1D:'Diario','12H':'12 horas','4H':'4 horas','1H':'1 hora','15m':'15 min — entrada'}[tf]}</span>
+            ${imgData?`<span style="font-size:11px;color:var(--green);margin-left:auto"><i class="fa fa-check"></i> Imagen guardada</span>`:'' }
+          </div>
+          ${imgData?`<div style="position:relative;margin-bottom:8px"><img src="${imgData}" alt="${tf}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)"><button onclick="removeTFImage('${id}','${tf}')" style="position:absolute;top:6px;right:6px;background:rgba(255,77,106,.9);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:4px 10px;font-size:11px"><i class="fa fa-trash"></i> Borrar</button></div>`:''}
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="file" id="tf-img-file-${id}-${tf}" accept="image/*" style="display:none" onchange="saveTFImageFile('${id}','${tf}',this)">
+            <button class="btn btn-ghost" style="font-size:12px" onclick="document.getElementById('tf-img-file-${id}-${tf}').click()"><i class="fa fa-upload"></i> Subir imagen</button>
+            <input type="url" id="tf-img-url-${id}-${tf}" placeholder="o pega URL de TradingView..." style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px" value="">
+            <button class="btn btn-ghost" style="font-size:12px" onclick="saveTFImageURL('${id}','${tf}')"><i class="fa fa-save"></i> Guardar</button>
+          </div>
+        </div>`;
+      }).join('')}
     </div>
 
     <!-- ANÁLISIS CRT DEL TRADE -->
@@ -1235,6 +1243,34 @@ function removeTradeStep(id,i){
   if(!tradeDetails[id])return;
   tradeDetails[id].steps.splice(i,1);
   document.getElementById(`td-steps-${id}`).innerHTML=renderSteps(tradeDetails[id].steps,id);
+}
+
+function saveTFImageFile(tradeId,tf,input){
+  if(!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    if(!tradeDetails[tradeId])tradeDetails[tradeId]={steps:[],images:[],crt:{}};
+    tradeDetails[tradeId]['img_'+tf]=e.target.result;
+    notify('Imagen '+tf+' guardada ✅');
+    openTradeDetail(tradeId);
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function saveTFImageURL(tradeId,tf){
+  const input=document.getElementById('tf-img-url-'+tradeId+'-'+tf);
+  if(!input||!input.value.trim())return;
+  if(!tradeDetails[tradeId])tradeDetails[tradeId]={steps:[],images:[],crt:{}};
+  tradeDetails[tradeId]['img_'+tf]=input.value.trim();
+  notify('Imagen '+tf+' guardada ✅');
+  openTradeDetail(tradeId);
+}
+
+function removeTFImage(tradeId,tf){
+  if(!tradeDetails[tradeId])return;
+  tradeDetails[tradeId]['img_'+tf]='';
+  notify('Imagen '+tf+' eliminada');
+  openTradeDetail(tradeId);
 }
 
 function addTradeImageFile(id,input){
