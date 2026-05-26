@@ -157,6 +157,19 @@ tbody tr:last-child td{border-bottom:none}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
+/* ─── LOGIN ─── */
+.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:40px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:16px}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.login-logo-icon{width:40px;height:40px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;font-weight:700}
+.login-logo-text{font-size:20px;font-weight:700}
+.login-logo-text span{color:var(--green)}
+.login-title{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.login-sub{font-size:13px;color:var(--text2);margin-top:-8px}
+.login-error{background:var(--red2);border:1px solid var(--red3);color:var(--red);padding:10px 14px;border-radius:8px;font-size:12px;display:none}
+.login-error.show{display:block}
+.login-footer{font-size:11px;color:var(--text3);text-align:center;margin-top:4px}
+
 /* ─── NOTIFY ─── */
 .notify{position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;transform:translateY(60px);opacity:0;transition:all .3s}
 .notify.show{transform:translateY(0);opacity:1}
@@ -277,6 +290,7 @@ tbody tr:last-child td{border-bottom:none}
       <span id="sync-status" style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:5px"><i class="fa fa-cloud"></i> Conectando...</span>
       <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema"><i class="fa fa-moon"></i></button>
       <button class="btn btn-primary" onclick="nav('nuevo',document.querySelectorAll('.nav-item')[1])"><i class="fa fa-plus"></i> Nuevo trade</button>
+      <button class="theme-toggle" onclick="doLogout()" title="Cerrar sesión" style="color:var(--red)"><i class="fa fa-right-from-bracket"></i></button>
     </div>
   </div>
 
@@ -573,6 +587,32 @@ tbody tr:last-child td{border-bottom:none}
 <!-- ─── NOTIFY ─── -->
 <div class="notify" id="notify"></div>
 
+<!-- ─── LOGIN SCREEN ─── -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">T</div>
+      <div class="login-logo-text">Trade<span>Journal</span></div>
+    </div>
+    <div class="login-title">Bienvenido</div>
+    <div class="login-sub">Inicia sesión para acceder a tu journal</div>
+    <div class="login-error" id="login-error"></div>
+    <div class="fg">
+      <label>Correo electrónico</label>
+      <input type="email" id="login-email" placeholder="tu@correo.com" style="font-size:14px;padding:11px 14px">
+    </div>
+    <div class="fg">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" style="font-size:14px;padding:11px 14px" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()" id="login-btn" style="padding:12px;font-size:14px;border-radius:10px;margin-top:4px">
+      <i class="fa fa-arrow-right-to-bracket"></i> Iniciar sesión
+    </button>
+    <div id="login-forgot" style="text-align:center;font-size:12px;color:var(--text2);cursor:pointer;margin-top:-8px" onclick="doForgot()">¿Olvidaste tu contraseña? <span style="color:var(--green)">Recuperar</span></div>
+    <div class="login-footer">🔒 Acceso privado · Solo usuarios autorizados</div>
+  </div>
+</div>
+
 <!-- ─── DAY MODAL (trades del día) ─── -->
 <div class="modal-overlay" id="day-modal">
   <div class="modal" style="max-width:560px">
@@ -653,6 +693,7 @@ tbody tr:last-child td{border-bottom:none}
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,doc,setDoc,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 const firebaseConfig={
   apiKey:"AIzaSyBonqSqiSWxEyALujCgonqHtqojXW3tuXQ",
   authDomain:"journal-crt.firebaseapp.com",
@@ -663,13 +704,28 @@ const firebaseConfig={
 };
 const _app=initializeApp(firebaseConfig);
 const _db=getFirestore(_app);
+const _auth=getAuth(_app);
 window._db=_db;
+window._auth=_auth;
 window._fsDoc=doc;
 window._fsSetDoc=setDoc;
 window._fsGetDoc=getDoc;
+window._fbSignIn=signInWithEmailAndPassword;
+window._fbSignOut=signOut;
+window._fbResetPwd=sendPasswordResetEmail;
 window._firebaseReady=true;
 console.log("🔥 Firebase listo");
-if(window._onFirebaseReady)window._onFirebaseReady();
+// Auth state listener
+onAuthStateChanged(_auth,(user)=>{
+  if(user){
+    window._currentUser=user;
+    document.getElementById('login-screen').style.display='none';
+    if(window._onFirebaseReady)window._onFirebaseReady();
+  } else {
+    window._currentUser=null;
+    document.getElementById('login-screen').style.display='flex';
+  }
+});
 </script>
 
 <script>
@@ -1744,6 +1800,47 @@ function sample(){
     mk(8,14,'GBP/JPY','Forex','Long','London',185.50,186.20,185.10,187.00,0.5,180,1.0,'FVG','Sesión europea fuerte'),
     mk(11,9,'USD/CAD','Forex','Short','New York',1.3680,1.3620,1.3720,1.3580,0.8,300,1.5,'BOS+OB','Setup textbook'),
   ];
+}
+
+// ══════════════════════════════════════════
+// AUTH FUNCTIONS
+// ══════════════════════════════════════════
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const errEl=document.getElementById('login-error');
+  const btn=document.getElementById('login-btn');
+  if(!email||!pass){errEl.textContent='Por favor ingresa tu correo y contraseña.';errEl.classList.add('show');return;}
+  btn.textContent='Iniciando sesión...';btn.disabled=true;
+  try{
+    await window._fbSignIn(window._auth,email,pass);
+    errEl.classList.remove('show');
+  } catch(e){
+    let msg='Correo o contraseña incorrectos.';
+    if(e.code==='auth/too-many-requests')msg='Demasiados intentos. Espera unos minutos.';
+    if(e.code==='auth/user-not-found')msg='No existe una cuenta con ese correo.';
+    errEl.textContent=msg;errEl.classList.add('show');
+  }
+  btn.innerHTML='<i class="fa fa-arrow-right-to-bracket"></i> Iniciar sesión';btn.disabled=false;
+}
+
+async function doForgot(){
+  const email=document.getElementById('login-email').value.trim();
+  const errEl=document.getElementById('login-error');
+  if(!email){errEl.textContent='Ingresa tu correo primero para recuperar la contraseña.';errEl.classList.add('show');return;}
+  try{
+    await window._fbResetPwd(window._auth,email);
+    errEl.style.background='var(--green2)';errEl.style.borderColor='var(--green)';errEl.style.color='var(--green)';
+    errEl.textContent='✅ Correo de recuperación enviado. Revisa tu bandeja.';errEl.classList.add('show');
+  } catch(e){
+    errEl.textContent='No se pudo enviar el correo. Verifica la dirección.';errEl.classList.add('show');
+  }
+}
+
+async function doLogout(){
+  if(!confirm('¿Cerrar sesión?'))return;
+  await window._fbSignOut(window._auth);
+  notify('Sesión cerrada');
 }
 
 // ══════════════════════════════════════════
