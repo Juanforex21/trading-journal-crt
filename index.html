@@ -349,9 +349,10 @@ tbody tr:last-child td{border-bottom:none}
             <div class="fg"><label>Stop Loss</label><input type="number" id="f-sl" step="any" placeholder="0.00"></div>
             <div class="fg"><label>Take Profit</label><input type="number" id="f-tp" step="any" placeholder="0.00"></div>
           </div>
-          <div class="form-grid3">
+          <div class="form-grid4">
             <div class="fg"><label>Tamaño (lotes/contratos)</label><input type="number" id="f-size" step="any" placeholder="0.01"></div>
             <div class="fg"><label>Resultado ($)</label><input type="number" id="f-pnl" step="any" placeholder="+150 o -75"></div>
+            <div class="fg"><label>Comisión ($)</label><input type="number" id="f-comision" step="any" placeholder="-5.00"></div>
             <div class="fg"><label>Resultado (%)</label><input type="number" id="f-pct" step="any" placeholder="+1.5 o -0.5"></div>
           </div>
           <div class="form-divider">Notas</div>
@@ -914,7 +915,7 @@ function accTrades(){return trades.filter(t=>t.account===currentAccount)}
 function calcStats(arr){
   if(!arr.length)return{total:0,wins:0,losses:0,be:0,winrate:0,totalPnl:0,avgWin:0,avgLoss:0,pf:0,maxDD:0,avgRR:0,bestStreak:0,worstStreak:0};
   const wins=arr.filter(t=>t.pnl>0),losses=arr.filter(t=>t.pnl<0),be=arr.filter(t=>t.pnl==0);
-  const totalPnl=arr.reduce((s,t)=>s+Number(t.pnl),0);
+  const totalPnl=arr.reduce((s,t)=>s+Number(t.pnl)+(Number(t.comision)||0),0);
   const sumW=wins.reduce((s,t)=>s+Number(t.pnl),0);
   const sumL=Math.abs(losses.reduce((s,t)=>s+Number(t.pnl),0));
   const avgWin=wins.length?sumW/wins.length:0,avgLoss=losses.length?sumL/losses.length:0;
@@ -1376,11 +1377,12 @@ function guardarTrade(){
     pnl:parseFloat(document.getElementById('f-pnl').value)||0,
     pct:parseFloat(document.getElementById('f-pct').value)||0,
     notas:document.getElementById('f-notas').value,
-    screenshot:document.getElementById('f-screenshot').value
+    screenshot:document.getElementById('f-screenshot').value,
+    comision:parseFloat(document.getElementById('f-comision').value)||0,
   };
   trades.push(t);save();clearForm();notify('Operación guardada');
 }
-function clearForm(){['f-activo','f-setup','f-entrada','f-salida','f-sl','f-tp','f-size','f-pnl','f-pct','f-notas','f-screenshot'].forEach(id=>document.getElementById(id).value='');}
+function clearForm(){['f-activo','f-setup','f-entrada','f-salida','f-sl','f-tp','f-size','f-pnl','f-pct','f-notas','f-screenshot','f-comision'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});}
 function delTrade(id){if(!confirm('¿Eliminar esta operación?'))return;trades=trades.filter(t=>t.id!==id);save();renderHistorial();}
 
 function openEditModal(id){
