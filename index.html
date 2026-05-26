@@ -1593,21 +1593,31 @@ function parseNotionCSV(text,fname){
     const row={};headers.forEach((h,idx)=>{row[h]=cols[idx]||'';});
     // Map Notion columns (flexible)
     const get=(...keys)=>{for(const k of keys){const nk=k.toLowerCase().replace(/[^a-z0-9]/g,'');for(const rk of Object.keys(row)){if(rk===nk)return row[rk];}}return '';};
-    const fecha=get('fecha','date','dia','day','created','name')||new Date().toISOString().slice(0,10);
-    const activo=get('activo','asset','instrumento','symbol','par','pair','mercado')||'N/A';
-    const dir=(get('direccion','dir','direction','side','tipo','type')||'Long').includes('ort')?'Short':'Long';
+    const rawFecha=get('fecha','date','dia','day','created','name','datetime')||new Date().toISOString().slice(0,10);
+    const fecha=rawFecha.slice(0,10);
+    const hora=rawFecha.length>10?rawFecha.slice(11,16):'00:00';
+    const activo=get('activo','asset','instrumento','symbol','par','pair','simbolo')||'N/A';
+    const dirRaw=get('direccion','dir','direction','side','tipo','type')||'Long';
+    const dir=dirRaw.toLowerCase().includes('ort')?'Short':'Long';
     const entrada=parseNum(get('entrada','entry','open','openprice','precio'));
-    const salida=parseNum(get('salida','exit','close','closeprice','salida'));
-    const pnl=parseNum(get('pnl','resultado','result','profit','ganancia','perdida','pl','netprofit'));
+    const salida=parseNum(get('salida','exit','close','closeprice'));
+    const sl=parseNum(get('sl','stoploss','stop'));
+    const tp=parseNum(get('tp','takeprofit','take'));
+    const size=parseNum(get('size','volumen','volume','lotes','lots','tamano'));
+    const pnl=parseNum(get('pnl','resultado','result','profit','ganancia','perdida','pl','netprofit','beneficio'));
+    const comision=parseNum(get('comision','commission','com'));
+    const sesion=get('sesion','session','sesion')||'New York';
     const setup=get('setup','estrategia','strategy','signal');
     const notas=get('notas','nota','notes','note','comentario','observacion');
     if(!activo||activo==='N/A')continue;
+    const forexP=['EUR','GBP','USD','JPY','CHF','AUD','NZD','CAD','XAU','XAG'];
+    const isFx=forexP.some(c=>activo.toUpperCase().includes(c));
     parsed.push({
       id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),
       account:currentAccount,
       fecha:fecha.slice(0,10)||new Date().toISOString().slice(0,10),
-      hora:'00:00',activo:activo.toUpperCase(),mercado:'Forex',
-      dir,sesion:'New York',entrada,salida,sl:0,tp:0,size:0,pnl,pct:0,setup,notas,screenshot:''
+      hora,activo:activo.toUpperCase(),mercado:isFx?'Forex':'Futuros',
+      dir,sesion:sesion||'New York',entrada,salida,sl,tp,size,pnl,comision,pct:0,setup,notas,screenshot:''
     });
   }
   if(!parsed.length){document.getElementById('notion-log').textContent='⚠️ No se encontraron trades válidos. Verifica las columnas de tu CSV de Notion.';return;}
