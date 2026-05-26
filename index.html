@@ -680,7 +680,6 @@ tbody tr:last-child td{border-bottom:none}
 <script>
 window._firebaseReady = false;
 window._currentUser = null;
-// Will be set by login system
 </script>
 
 <script>
@@ -691,6 +690,10 @@ const SK='tj_pro_v1';
 const SK_ACCOUNTS='tj_accounts_v1';
 const SK_CRT='tj_crt_v1';
 const SK_THEME='tj_theme_v1';
+const SB_URL='https://buoswluvrevchzotnrlh.supabase.co';
+const SB_KEY='sb_publishable_o405ZlCJZYMVIOn37TUGKA_mnwaBieN';
+let _sbToken=null;
+let _currentUser=null;
 let trades=[], charts={}, calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 let currentAccount='real';
 let accounts=[];
@@ -1681,13 +1684,24 @@ async function doLogin(){
   if(!email||!pass){errEl.textContent='Por favor ingresa tu correo y contraseña.';errEl.classList.add('show');return;}
   btn.textContent='Iniciando sesión...';btn.disabled=true;
   try{
-    await window._fbSignIn(window._auth,email,pass);
-    errEl.classList.remove('show');
+    const r=await fetch('https://buoswluvrevchzotnrlh.supabase.co/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':'sb_publishable_o405ZlCJZYMVIOn37TUGKA_mnwaBieN'},
+      body:JSON.stringify({email,password:pass})
+    });
+    const data=await r.json();
+    if(data.access_token){
+      _currentUser=email;_sbToken=data.access_token;
+      localStorage.setItem('tj_session',JSON.stringify({email,token:data.access_token,exp:Date.now()+3600000}));
+      document.getElementById('login-screen').style.display='none';
+      errEl.classList.remove('show');
+      await loadData();
+    } else {
+      const msg=data.error_description||data.msg||'Correo o contraseña incorrectos.';
+      errEl.textContent=msg;errEl.classList.add('show');
+    }
   } catch(e){
-    let msg='Correo o contraseña incorrectos.';
-    if(e.code==='auth/too-many-requests')msg='Demasiados intentos. Espera unos minutos.';
-    if(e.code==='auth/user-not-found')msg='No existe una cuenta con ese correo.';
-    errEl.textContent=msg;errEl.classList.add('show');
+    errEl.textContent='Error de conexión. Verifica tu internet.';errEl.classList.add('show');
   }
   btn.innerHTML='<i class="fa fa-arrow-right-to-bracket"></i> Iniciar sesión';btn.disabled=false;
 }
@@ -1695,19 +1709,13 @@ async function doLogin(){
 async function doForgot(){
   const email=document.getElementById('login-email').value.trim();
   const errEl=document.getElementById('login-error');
-  if(!email){errEl.textContent='Ingresa tu correo primero para recuperar la contraseña.';errEl.classList.add('show');return;}
-  try{
-    await window._fbResetPwd(window._auth,email);
-    errEl.style.background='var(--green2)';errEl.style.borderColor='var(--green)';errEl.style.color='var(--green)';
-    errEl.textContent='✅ Correo de recuperación enviado. Revisa tu bandeja.';errEl.classList.add('show');
-  } catch(e){
-    errEl.textContent='No se pudo enviar el correo. Verifica la dirección.';errEl.classList.add('show');
-  }
+  if(!email){errEl.textContent='Ingresa tu correo primero.';errEl.classList.add('show');return;}
+  errEl.style.background='var(--green2)';errEl.style.borderColor='var(--green)';errEl.style.color='var(--green)';
+  errEl.textContent='Contacta al administrador para recuperar tu contraseña.';errEl.classList.add('show');
 }
 
-async function doLogout(){
+function doLogout(){
   if(!confirm('¿Cerrar sesión?'))return;
-  await window._fbSignOut(window._auth);
   notify('Sesión cerrada');
 }
 
@@ -1983,8 +1991,26 @@ function loadCRT2(){
 const today2=new Date().toISOString().slice(0,10),now2=new Date().toTimeString().slice(0,5);
 document.getElementById('f-fecha').value=today2;
 document.getElementById('f-hora').value=now2;
-document.getElementById('login-screen').style.display='none';
-load();
+
+// Apply theme from storage immediately
+try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
+applyTheme();
+
+// Check saved session
+function checkAndLoad(){
+  try{
+    const s=JSON.parse(localStorage.getItem('tj_session'));
+    if(s&&s.token&&s.email&&Date.now()<(s.exp||0)){
+      _currentUser=s.email;_sbToken=s.token;
+      document.getElementById('login-screen').style.display='none';
+      load();
+      return;
+    }
+  }catch(e){}
+  // No valid session - show login
+  document.getElementById('login-screen').style.display='flex';
+}
+checkAndLoad();
 </script>
 </body>
 </html>
