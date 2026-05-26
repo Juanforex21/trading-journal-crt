@@ -676,9 +676,8 @@ tbody tr:last-child td{border-bottom:none}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
-<!-- Auth stub - local mode -->
+<!-- Auth stub -->
 <script>
-window._firebaseReady = false;
 window._currentUser = null;
 </script>
 
@@ -704,73 +703,67 @@ let tradeDetails={};
 let isDark=true;
 let _syncTimeout=null;
 
+
 // ══════════════════════════════════════════
-// FIREBASE SYNC
+// SYNC — solo localStorage
 // ══════════════════════════════════════════
-async function fbSave(docId,data){
-  try{
-    if(!window._firebaseReady)return;
-    await window._fsSetDoc(window._fsDoc(window._db,'journal',docId),{data:JSON.stringify(data),updated:Date.now()});
-  }catch(e){console.warn('Firebase save:',e.message);}
-}
-async function fbLoad(docId){
-  try{
-    if(!window._firebaseReady)return null;
-    const snap=await window._fsGetDoc(window._fsDoc(window._db,'journal',docId));
-    if(snap.exists())return JSON.parse(snap.data().data);
-  }catch(e){console.warn('Firebase load:',e.message);}
-  return null;
-}
 function scheduleSyncSave(){
-  clearTimeout(_syncTimeout);
-  _syncTimeout=setTimeout(async()=>{
-    showSyncStatus('syncing');
-    await Promise.all([fbSave('trades',trades),fbSave('accounts',accounts),fbSave('crt',{state:crtState,snapshots:crtSnapshots})]);
-    showSyncStatus('ok');
-  },1500);
+  // Solo guarda en localStorage por ahora
+  try{localStorage.setItem(SK,JSON.stringify(trades));}catch(e){}
+  try{localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));}catch(e){}
+  showSyncStatus('ok');
 }
+
 function showSyncStatus(state){
-  if(state==='local'){const el=document.getElementById('sync-status');if(el){el.innerHTML='<i class="fa fa-check-circle"></i> Local';el.style.color='var(--green)';}return;}
   const el=document.getElementById('sync-status');
   if(!el)return;
   if(state==='syncing'){el.innerHTML='<i class="fa fa-rotate fa-spin"></i> Guardando...';el.style.color='var(--amber)';}
-  else if(state==='ok'){el.innerHTML='<i class="fa fa-cloud-arrow-up"></i> Sincronizado';el.style.color='var(--green)';setTimeout(()=>{const e2=document.getElementById('sync-status');if(e2){e2.innerHTML='<i class="fa fa-cloud"></i> Nube activa';e2.style.color='var(--text3)';}},2500);}
-  else{const e2=document.getElementById('sync-status');if(e2){e2.innerHTML='<i class="fa fa-triangle-exclamation"></i> Sin conexión (local)';e2.style.color='var(--text3)';}}
+  else if(state==='ok'||state==='local'){el.innerHTML='<i class="fa fa-check-circle"></i> Guardado';el.style.color='var(--green)';setTimeout(()=>{const e2=document.getElementById('sync-status');if(e2){e2.innerHTML='<i class="fa fa-circle-check"></i> Local';e2.style.color='var(--text3)';}},2000);}
+  else{const e2=document.getElementById('sync-status');if(e2){e2.innerHTML='<i class="fa fa-circle-check"></i> Local';e2.style.color='var(--text3)';}}
 }
 
 // ══════════════════════════════════════════
 // LOAD / SAVE
 // ══════════════════════════════════════════
+const DEFAULT_ACCOUNTS=[{"id":"acc_mpm0cg5v","name":"The5ers25k","type":"prop","balance":25000,"emoji":"🏆"},{"id":"acc_mpm35dgr","name":"the5ers5k","type":"prop","balance":5000,"emoji":"🏆"}];
+
 async function loadData(){
-  // Load from localStorage (Supabase sync can be added later)
+  // Trades
   try{const r=localStorage.getItem(SK);if(r)trades=JSON.parse(r);}catch(e){trades=[];}
   if(!trades.length)trades=sample();
+
+  // Accounts
   try{const r=localStorage.getItem(SK_ACCOUNTS);if(r)accounts=JSON.parse(r);}catch(e){accounts=[];}
-  if(!accounts.length)accounts=[{"id": "acc_mpm0cg5v", "name": "The5ers25k", "type": "prop", "balance": 25000, "emoji": "🏆"}, {"id": "acc_mpm35dgr", "name": "the5ers5k", "type": "prop", "balance": 5000, "emoji": "🏆"}];
+  if(!accounts.length)accounts=DEFAULT_ACCOUNTS;
+
+  // Set currentAccount to first valid account
+  if(!accounts.find(a=>a.id===currentAccount))currentAccount=accounts[0].id;
+
+  // CRT
   try{const r=localStorage.getItem(SK_CRT);if(r){const p=JSON.parse(r);crtState=p.state||{};crtSnapshots=p.snapshots||[];}}catch(e){}
   try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
+
   loadCRT2();
-  applyTheme();renderAccountSelect();renderDashboard();
+  applyTheme();
+  renderAccountSelect();
+  renderDashboard();
   showSyncStatus('local');
 }
 
-function load(){
-  loadData();
-}
+function load(){ loadData(); }
 
 function save(){
   try{localStorage.setItem(SK,JSON.stringify(trades));}catch(e){}
-  scheduleSyncSave();
+  showSyncStatus('ok');
 }
 function saveAccounts(){
   try{localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));}catch(e){}
-  scheduleSyncSave();
 }
 function saveCRT(){
   try{localStorage.setItem(SK_CRT,JSON.stringify({state:crtState,snapshots:crtSnapshots}));}catch(e){}
-  scheduleSyncSave();
 }
 function saveTheme(){try{localStorage.setItem(SK_THEME,isDark?'dark':'light');}catch(e){}}
+
 
 // ══════════════════════════════════════════
 // THEME
@@ -1716,6 +1709,9 @@ async function doForgot(){
 
 function doLogout(){
   if(!confirm('¿Cerrar sesión?'))return;
+  localStorage.removeItem('tj_session');
+  _currentUser=null;_sbToken=null;
+  document.getElementById('login-screen').style.display='flex';
   notify('Sesión cerrada');
 }
 
@@ -1992,25 +1988,13 @@ const today2=new Date().toISOString().slice(0,10),now2=new Date().toTimeString()
 document.getElementById('f-fecha').value=today2;
 document.getElementById('f-hora').value=now2;
 
-// Apply theme from storage immediately
+// Apply theme immediately
 try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
 applyTheme();
 
-// Check saved session
-function checkAndLoad(){
-  try{
-    const s=JSON.parse(localStorage.getItem('tj_session'));
-    if(s&&s.token&&s.email&&Date.now()<(s.exp||0)){
-      _currentUser=s.email;_sbToken=s.token;
-      document.getElementById('login-screen').style.display='none';
-      load();
-      return;
-    }
-  }catch(e){}
-  // No valid session - show login
-  document.getElementById('login-screen').style.display='flex';
-}
-checkAndLoad();
+// Hide login screen and load directly — data is embedded
+document.getElementById('login-screen').style.display='none';
+load();
 </script>
 </body>
 </html>
