@@ -250,42 +250,6 @@ tbody tr:last-child td{border-bottom:none}
 
 /* ─── RESPONSIVE CHECK ─── */
 @media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr)}.crt-conditions{grid-template-columns:repeat(2,1fr)}}
-
-/* ─── CRT V2 ─── */
-.crt-tf-card2{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .2s}
-.crt-tf-rr{border-color:var(--amber)!important}
-.crt-tf-ok{border-color:var(--green3)!important}
-.crt-tf-head2{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--border)}
-.crt-tf-rr .crt-tf-head2{background:var(--amber2);border-color:var(--amber)}
-.crt-tf-ok .crt-tf-head2{background:var(--green2);border-color:var(--green3)}
-.crt-tf-badge2{font-size:12px;font-weight:600;padding:3px 10px;border-radius:8px;background:var(--bg4);color:var(--text2);border:1px solid var(--border2)}
-.crt-tf-ok .crt-tf-badge2{background:var(--green2);color:var(--green);border-color:var(--green3)}
-.crt-tf-rr .crt-tf-badge2{background:var(--amber2);color:var(--amber);border-color:var(--amber)}
-.crt-conds2{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 14px}
-.crt-cb{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:all .15s;user-select:none;position:relative;text-align:center}
-.crt-cb:hover{border-color:var(--border2);transform:scale(1.02)}
-.crt-cb-yes{background:var(--green2);border-color:var(--green)!important;color:var(--green)}
-.crt-cb-no{background:var(--red2);border-color:var(--red)!important;color:var(--red)}
-.crt-cb-rr{background:var(--amber2);border-color:var(--amber)!important;color:var(--amber)}
-.crt-verdict2{border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:1.5rem;border:1px solid transparent}
-.crt-v-v-go{background:var(--green2);border-color:var(--green3)}
-.crt-v-v-wait{background:var(--amber2);border-color:var(--amber)}
-.crt-v-v-no{background:var(--red2);border-color:var(--red3)}
-.crt-v-v-idle{background:var(--bg3);border-color:var(--border)}
-.crt-af-node{font-size:11px;padding:3px 8px;border-radius:8px;border:1px solid var(--border2);color:var(--text3);background:var(--bg3)}
-.crt-af-ok{background:var(--green2);color:var(--green);border-color:var(--green3)}
-.crt-af-rr{background:var(--amber2);color:var(--amber);border-color:var(--amber)}
-.crt-af-empty{opacity:.4}
-.crt-af-arr{font-size:12px;color:var(--text3)}
-
-/* ─── CRT IN TRADE DETAIL ─── */
-.crt-trade-tf{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px}
-.crt-trade-tf-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.crt-trade-conds{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.crt-trade-cond{padding:7px;border-radius:8px;border:1px solid var(--border2);background:var(--bg4);text-align:center;font-size:11px;cursor:pointer;user-select:none}
-.crt-trade-cond.yes{background:var(--green2);border-color:var(--green);color:var(--green);font-weight:600}
-.crt-trade-cond.no{background:var(--red2);border-color:var(--red);color:var(--red)}
-.crt-trade-cond.rr{background:var(--amber2);border-color:var(--amber);color:var(--amber);font-weight:600}
 </style>
 </head>
 <body>
@@ -309,7 +273,7 @@ tbody tr:last-child td{border-bottom:none}
     <div class="nav-label" style="margin-top:12px">Análisis</div>
     <div class="nav-item" onclick="nav('analisis',this)"><i class="fa fa-chart-bar"></i> Estadísticas</div>
     <div class="nav-label" style="margin-top:12px">Estrategia</div>
-    <div class="nav-item" onclick="nav('crt',this)"><i class="fa fa-crosshairs"></i> Análisis pre entrada</div>
+    <div class="nav-item" onclick="nav('crt',this)"><i class="fa fa-crosshairs"></i> Estrategia CRT</div>
     <div class="nav-label" style="margin-top:12px">Importar</div>
     <div class="nav-item" onclick="nav('importar',this)"><i class="fa fa-file-import"></i> Importar datos</div>
     <div class="nav-label" style="margin-top:12px">Cuentas</div>
@@ -475,7 +439,44 @@ tbody tr:last-child td{border-bottom:none}
 
     <!-- ─── CRT STRATEGY ─── -->
     <div id="view-crt" class="view">
-      <div id="crt-app"></div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:700;margin-bottom:4px">Estrategia CRT — Requerimientos de entrada</div>
+          <div style="font-size:12px;color:var(--text2)">Marca si cada condición cumple o no cumple en cada temporalidad. El sistema calculará si hay confluencia suficiente para operar.</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="resetCRT()"><i class="fa fa-rotate-left"></i> Resetear</button>
+          <button class="btn btn-primary" onclick="saveCRTSnapshot()"><i class="fa fa-camera"></i> Guardar análisis</button>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="crt-summary">
+        <div class="crt-progress-ring">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="var(--bg4)" stroke-width="8"/>
+            <circle id="crt-ring-circle" cx="40" cy="40" r="34" fill="none" stroke="var(--green)" stroke-width="8" stroke-dasharray="213.63" stroke-dashoffset="213.63" stroke-linecap="round" style="transition:all .5s"/>
+          </svg>
+          <div class="crt-ring-text">
+            <div class="crt-ring-pct" id="crt-pct">0%</div>
+            <div class="crt-ring-label">cumple</div>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">Confluencia total</div>
+          <div id="crt-summary-text" style="font-size:12px;color:var(--text2);line-height:1.6">Marca las condiciones para ver el análisis de confluencia.</div>
+        </div>
+        <div id="crt-verdict" class="crt-verdict no-go">— Sin datos</div>
+      </div>
+
+      <!-- Timeframes -->
+      <div class="crt-timeframes" id="crt-timeframes"></div>
+
+      <!-- Saved snapshots -->
+      <div class="card" id="crt-snapshots-card" style="display:none">
+        <div class="card-title">Análisis guardados</div>
+        <div id="crt-snapshots-list"></div>
+      </div>
     </div>
 
     <!-- ─── IMPORTAR ─── -->
@@ -672,7 +673,19 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-
+<!-- ─── CRT SNAPSHOT MODAL ─── -->
+<div class="modal-overlay" id="crt-snap-modal">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close" onclick="closeModal('crt-snap-modal')"><i class="fa fa-xmark"></i></button>
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px">Guardar análisis CRT</div>
+    <div class="fg" style="margin-bottom:12px"><label>Descripción / Instrumento</label><input type="text" id="crt-snap-desc" placeholder="EUR/USD setup CRT largo..."></div>
+    <div class="fg" style="margin-bottom:16px"><label>Nota adicional</label><textarea id="crt-snap-note" placeholder="Contexto del mercado..."></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal('crt-snap-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmSaveCRTSnapshot()"><i class="fa fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
@@ -804,7 +817,6 @@ async function loadData(){
   }
 
   try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
-  loadCRT2();
   applyTheme();renderAccountSelect();renderDashboard();
 }
 
@@ -941,13 +953,13 @@ function nav(v,el){
   document.querySelectorAll('.view').forEach(i=>i.classList.remove('active'));
   const vEl=document.getElementById('view-'+v);
   if(vEl)vEl.classList.add('active');
-  const titles={dashboard:'Dashboard',nuevo:'Nueva Operación',historial:'Historial',calendario:'Calendario P&L',analisis:'Estadísticas',crt:'Análisis pre entrada',importar:'Importar datos',cuentas:'Gestionar Cuentas'};
+  const titles={dashboard:'Dashboard',nuevo:'Nueva Operación',historial:'Historial',calendario:'Calendario P&L',analisis:'Estadísticas',crt:'Estrategia CRT',importar:'Importar datos',cuentas:'Gestionar Cuentas'};
   document.getElementById('topbar-title').textContent=titles[v]||v;
   if(v==='dashboard')renderDashboard();
   if(v==='historial')renderHistorial();
   if(v==='calendario')renderCalendario();
   if(v==='analisis')renderAnalisis();
-  if(v==='crt'){crtInit();loadCRT2();renderCRT();}
+  if(v==='crt')renderCRT();
   if(v==='cuentas')renderAccountsList();
 }
 
@@ -1163,34 +1175,18 @@ function renderTradeDetailModal(t,td){
     </div>
     ${t.notas?`<div style="background:var(--bg3);border-radius:8px;padding:12px;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Notas</div>${t.notas}</div>`:''}
     
-    <!-- IMÁGENES POR TEMPORALIDAD -->
+    <!-- IMÁGENES -->
     <div style="margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px"><i class="fa fa-image"></i> Imágenes por temporalidad</div>
-      ${['1D','12H','4H','1H','15m'].map(tf=>{
-        const imgKey='img_'+tf;
-        const imgData=(td[imgKey]||'');
-        return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <span style="font-size:12px;font-weight:600;background:var(--bg4);padding:2px 8px;border-radius:6px;color:var(--text2);border:1px solid var(--border2)">${tf}</span>
-            <span style="font-size:12px;color:var(--text2)">${{1D:'Diario','12H':'12 horas','4H':'4 horas','1H':'1 hora','15m':'15 min — entrada'}[tf]}</span>
-            ${imgData?`<span style="font-size:11px;color:var(--green);margin-left:auto"><i class="fa fa-check"></i> Imagen guardada</span>`:'' }
-          </div>
-          ${imgData?`<div style="position:relative;margin-bottom:8px"><img src="${imgData}" alt="${tf}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)"><button onclick="removeTFImage('${id}','${tf}')" style="position:absolute;top:6px;right:6px;background:rgba(255,77,106,.9);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:4px 10px;font-size:11px"><i class="fa fa-trash"></i> Borrar</button></div>`:''}
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="file" id="tf-img-file-${id}-${tf}" accept="image/*" style="display:none" onchange="saveTFImageFile('${id}','${tf}',this)">
-            <button class="btn btn-ghost" style="font-size:12px" onclick="document.getElementById('tf-img-file-${id}-${tf}').click()"><i class="fa fa-upload"></i> Subir imagen</button>
-            <input type="url" id="tf-img-url-${id}-${tf}" placeholder="o pega URL de TradingView..." style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px" value="">
-            <button class="btn btn-ghost" style="font-size:12px" onclick="saveTFImageURL('${id}','${tf}')"><i class="fa fa-save"></i> Guardar</button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-
-    <!-- ANÁLISIS CRT DEL TRADE -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px"><i class="fa fa-crosshairs"></i> Análisis CRT del trade</div>
-      <div id="crt-trade-${id}">
-        ${renderTradeCRT(id)}
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px"><i class="fa fa-image"></i> Imágenes del trade</div>
+      <div id="td-images-${id}" class="image-gallery">${(td.images||[]).map((img,i)=>`<div style="position:relative"><img src="${img}" alt="Trade img"><button onclick="removeTradeImage('${id}',${i})" style="position:absolute;top:4px;right:4px;background:rgba(255,77,106,.9);border:none;border-radius:4px;color:#fff;cursor:pointer;padding:2px 6px;font-size:10px">✕</button></div>`).join('')}</div>
+      <div class="image-upload-zone" onclick="document.getElementById('td-img-input-${id}').click()">
+        <i class="fa fa-plus" style="font-size:20px;color:var(--text3);margin-bottom:6px;display:block"></i>
+        <div style="font-size:12px;color:var(--text3)">Agregar imagen (archivo o URL)</div>
+        <input type="file" id="td-img-input-${id}" accept="image/*" style="display:none" onchange="addTradeImageFile('${id}',this)">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input type="url" id="td-img-url-${id}" placeholder="URL de imagen (https://...)" style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px">
+        <button class="btn btn-ghost" onclick="addTradeImageURL('${id}')"><i class="fa fa-link"></i> Agregar</button>
       </div>
     </div>
 
@@ -1231,34 +1227,6 @@ function removeTradeStep(id,i){
   if(!tradeDetails[id])return;
   tradeDetails[id].steps.splice(i,1);
   document.getElementById(`td-steps-${id}`).innerHTML=renderSteps(tradeDetails[id].steps,id);
-}
-
-function saveTFImageFile(tradeId,tf,input){
-  if(!input.files[0])return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    if(!tradeDetails[tradeId])tradeDetails[tradeId]={steps:[],images:[],crt:{}};
-    tradeDetails[tradeId]['img_'+tf]=e.target.result;
-    notify('Imagen '+tf+' guardada ✅');
-    openTradeDetail(tradeId);
-  };
-  reader.readAsDataURL(input.files[0]);
-}
-
-function saveTFImageURL(tradeId,tf){
-  const input=document.getElementById('tf-img-url-'+tradeId+'-'+tf);
-  if(!input||!input.value.trim())return;
-  if(!tradeDetails[tradeId])tradeDetails[tradeId]={steps:[],images:[],crt:{}};
-  tradeDetails[tradeId]['img_'+tf]=input.value.trim();
-  notify('Imagen '+tf+' guardada ✅');
-  openTradeDetail(tradeId);
-}
-
-function removeTFImage(tradeId,tf){
-  if(!tradeDetails[tradeId])return;
-  tradeDetails[tradeId]['img_'+tf]='';
-  notify('Imagen '+tf+' eliminada');
-  openTradeDetail(tradeId);
 }
 
 function addTradeImageFile(id,input){
@@ -1319,7 +1287,133 @@ function renderAnalisis(){
   document.getElementById('adv-stats').innerHTML=`<div class="item"><span>Expectativa matemática</span><span style="color:${exp>=0?'var(--green)':'var(--red)'}">$${exp.toFixed(2)}</span></div><div class="item"><span>Avg ganancia</span><span style="color:var(--green)">$${s.avgWin.toFixed(0)}</span></div><div class="item"><span>Avg pérdida</span><span style="color:var(--red)">-$${s.avgLoss.toFixed(0)}</span></div><div class="item"><span>R:R promedio</span><span>${s.avgRR.toFixed(2)}</span></div><div class="item"><span>Profit Factor</span><span style="color:${s.pf>=1.5?'var(--green)':s.pf<1?'var(--red)':'var(--amber)'}">${s.pf>=99?'∞':s.pf.toFixed(2)}</span></div><div class="item"><span>Mejor racha ganadora</span><span style="color:var(--green)">+${s.bestStreak}</span></div><div class="item"><span>Peor racha perdedora</span><span style="color:var(--red)">${s.worstStreak}</span></div>`;
 }
 
+// ══════════════════════════════════════════
+// CRT STRATEGY
+// ══════════════════════════════════════════
+const CRT_TIMEFRAMES=[
+  {label:'1D',conditions:['TS','RA','RO','RI']},
+  {label:'12H',conditions:['TS','RA','RO','RI']},
+  {label:'4H',conditions:['TS','RA','RO','RI']},
+  {label:'1H',conditions:['TS','RA','RO','RI']},
+  {label:'15m',conditions:['TS','RA','RO','RI']},
+];
+const CRT_LABELS={
+  TS:'Tendencia / Sesgo',
+  RA:'Rango (Range)',
+  RO:'Rechazo / Order Block',
+  RI:'Ruptura / Imbalance',
+};
 
+function renderCRT(){
+  const tf=document.getElementById('crt-timeframes');
+  tf.innerHTML=CRT_TIMEFRAMES.map(({label,conditions})=>{
+    const cards=conditions.map(c=>{
+      const key=`${label}_${c}`;
+      const state=crtState[key]||'none'; // 'none' | 'yes' | 'no'
+      const cls=state==='yes'?'crt-cond yes':state==='no'?'crt-cond no':'crt-cond';
+      const icon=state==='yes'?'✅':state==='no'?'❌':'⬜';
+      const statusTxt=state==='yes'?'Cumple':state==='no'?'No cumple':'Sin marcar';
+      return `<div class="${cls}" onclick="toggleCRT('${label}','${c}',this)">
+        <div class="crt-cond-icon">${icon}</div>
+        <div class="crt-cond-label">${c}</div>
+        <div style="font-size:10px;color:inherit;opacity:.8">${CRT_LABELS[c]||c}</div>
+        <div class="crt-cond-status" style="margin-top:4px">${statusTxt}</div>
+      </div>`;
+    }).join('');
+    // score for this TF
+    const yesCount=conditions.filter(c=>crtState[`${label}_${c}`]==='yes').length;
+    const totalCount=conditions.length;
+    const scoreColor=yesCount===totalCount?'var(--green)':yesCount>=totalCount*.5?'var(--amber)':'var(--red)';
+    return `<div class="crt-tf-card">
+      <div class="crt-tf-header">
+        <div class="crt-tf-label" style="background:var(--bg4);padding:4px 10px;border-radius:6px">${label}</div>
+        <div style="font-size:12px;color:var(--text2)">Temporalidad</div>
+        <div class="crt-tf-score" style="color:${scoreColor}">${yesCount}/${totalCount} cumple</div>
+      </div>
+      <div class="crt-conditions">${cards}</div>
+    </div>`;
+  }).join('');
+  updateCRTSummary();
+  renderCRTSnapshots();
+}
+
+function toggleCRT(tf,cond,el){
+  const key=`${tf}_${cond}`;
+  const cur=crtState[key]||'none';
+  const next=cur==='none'?'yes':cur==='yes'?'no':'none';
+  crtState[key]=next;
+  saveCRT();
+  renderCRT();
+}
+
+function updateCRTSummary(){
+  let total=0,yes=0;
+  CRT_TIMEFRAMES.forEach(({label,conditions})=>{
+    conditions.forEach(c=>{total++;if(crtState[`${label}_${c}`]==='yes')yes++;});
+  });
+  const pct=total?Math.round((yes/total)*100):0;
+  // Ring
+  const circumference=213.63;
+  const offset=circumference-(circumference*(pct/100));
+  const ring=document.getElementById('crt-ring-circle');
+  if(ring){
+    ring.style.strokeDashoffset=offset;
+    ring.style.stroke=pct>=80?'#00d4aa':pct>=50?'#f59e0b':'#ff4d6a';
+  }
+  const pctEl=document.getElementById('crt-pct');
+  if(pctEl)pctEl.textContent=pct+'%';
+
+  const verdict=document.getElementById('crt-verdict');
+  const summaryText=document.getElementById('crt-summary-text');
+  if(pct>=80){
+    if(verdict){verdict.className='crt-verdict go';verdict.textContent='✅ OPERAR';}
+    if(summaryText)summaryText.textContent=`${yes} de ${total} condiciones cumplen. Confluencia alta — setup válido para operar.`;
+  } else if(pct>=50){
+    if(verdict){verdict.className='crt-verdict caution';verdict.textContent='⚠️ PRECAUCIÓN';}
+    if(summaryText)summaryText.textContent=`${yes} de ${total} condiciones cumplen. Confluencia parcial — evalúa con cuidado.`;
+  } else {
+    if(verdict){verdict.className='crt-verdict no-go';verdict.textContent='🚫 NO OPERAR';}
+    if(summaryText)summaryText.textContent=`${yes} de ${total} condiciones cumplen. Confluencia insuficiente — no entrar al mercado.`;
+  }
+}
+
+function resetCRT(){
+  if(!confirm('¿Resetear todas las condiciones CRT?'))return;
+  crtState={};saveCRT();renderCRT();notify('CRT reseteado');
+}
+
+function saveCRTSnapshot(){openModal('crt-snap-modal');}
+function confirmSaveCRTSnapshot(){
+  const desc=document.getElementById('crt-snap-desc').value.trim()||'Análisis sin título';
+  const note=document.getElementById('crt-snap-note').value.trim();
+  const snap={id:Date.now().toString(36),date:new Date().toISOString().slice(0,10),time:new Date().toTimeString().slice(0,5),desc,note,state:{...crtState}};
+  crtSnapshots.unshift(snap);if(crtSnapshots.length>20)crtSnapshots.pop();
+  saveCRT();closeModal('crt-snap-modal');renderCRTSnapshots();notify('Análisis CRT guardado');
+}
+
+function renderCRTSnapshots(){
+  const card=document.getElementById('crt-snapshots-card');
+  const list=document.getElementById('crt-snapshots-list');
+  if(!card||!list)return;
+  if(!crtSnapshots.length){card.style.display='none';return;}
+  card.style.display='block';
+  list.innerHTML=crtSnapshots.map((s,i)=>{
+    const total=Object.keys(s.state).length;
+    const yes=Object.values(s.state).filter(v=>v==='yes').length;
+    return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${s.desc}</div>
+        <div style="font-size:11px;color:var(--text3)">${s.date} ${s.time} · ${yes}/${total} condiciones cumplidas</div>
+        ${s.note?`<div style="font-size:11px;color:var(--text2);margin-top:4px">${s.note}</div>`:''}
+      </div>
+      <button onclick="loadCRTSnapshot(${i})" class="btn btn-ghost" style="font-size:11px;padding:5px 10px">Cargar</button>
+      <button onclick="deleteCRTSnapshot(${i})" class="btn-danger-sm"><i class="fa fa-trash"></i></button>
+    </div>`;
+  }).join('');
+}
+
+function loadCRTSnapshot(i){crtState={...crtSnapshots[i].state};saveCRT();renderCRT();notify('Análisis cargado');}
+function deleteCRTSnapshot(i){crtSnapshots.splice(i,1);saveCRT();renderCRTSnapshots();notify('Análisis eliminado');}
 
 // ══════════════════════════════════════════
 // TRADE FORMS
@@ -1683,46 +1777,6 @@ function mt5RowToTrade(row,src){
 }
 
 // ══════════════════════════════════════════
-// CRT PER TRADE
-// ══════════════════════════════════════════
-function renderTradeCRT(tradeId){
-  if(!tradeDetails[tradeId])tradeDetails[tradeId]={steps:[],images:[],crt:{}};
-  const crt=tradeDetails[tradeId].crt||{};
-  return CRT_TFS.map(tf=>{
-    const st=CRT_CONDS.filter(c=>c.id!=='RR'&&crt[tf.id+'_'+c.id]==='yes').length>0?'ok':crt[tf.id+'_RR']==='yes'?'rr':'none';
-    const condsHTML=CRT_CONDS.map(c=>{
-      const s=crt[tf.id+'_'+c.id]||'none';
-      const isRR=c.id==='RR';
-      let cls='crt-trade-cond';
-      if(s==='yes')cls+=isRR?' rr':' yes';
-      else if(s==='no')cls+=' no';
-      const icon=s==='yes'?(isRR?'⚠':'✓'):s==='no'?'✕':'–';
-      return `<div class="${cls}" onclick="toggleTradeCRT('${tradeId}','${tf.id}','${c.id}')">${icon} ${c.name}</div>`;
-    }).join('');
-    const badgeColor=st==='ok'?'var(--green)':st==='rr'?'var(--amber)':'var(--text3)';
-    return `<div class="crt-trade-tf">
-      <div class="crt-trade-tf-head">
-        <span style="font-size:12px;font-weight:600;background:var(--bg4);padding:2px 8px;border-radius:6px;color:${badgeColor};border:1px solid var(--border2)">${tf.id}</span>
-        <span style="font-size:12px;color:var(--text2)">${tf.lbl}</span>
-        <span style="font-size:11px;color:${badgeColor};margin-left:auto">${st==='ok'?'✓ Confirmado':st==='rr'?'⚠ RR — esperar':'Sin marcar'}</span>
-      </div>
-      <div class="crt-trade-conds">${condsHTML}</div>
-    </div>`;
-  }).join('');
-}
-
-function toggleTradeCRT(tradeId,tfId,condId){
-  if(!tradeDetails[tradeId])tradeDetails[tradeId]={steps:[],images:[],crt:{}};
-  if(!tradeDetails[tradeId].crt)tradeDetails[tradeId].crt={};
-  const key=tfId+'_'+condId;
-  const cur=tradeDetails[tradeId].crt[key]||'none';
-  if(condId==='RR'){tradeDetails[tradeId].crt[key]=cur==='none'?'yes':'none';}
-  else{tradeDetails[tradeId].crt[key]=cur==='none'?'yes':cur==='yes'?'no':'none';}
-  const el=document.getElementById('crt-trade-'+tradeId);
-  if(el)el.innerHTML=renderTradeCRT(tradeId);
-}
-
-// ══════════════════════════════════════════
 // MODAL HELPERS
 // ══════════════════════════════════════════
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -1809,239 +1863,6 @@ async function doLogout(){
   if(!confirm('¿Cerrar sesión?'))return;
   await window._fbSignOut(window._auth);
   notify('Sesión cerrada');
-}
-
-// ══════════════════════════════════════════
-// CRT ANALIZADOR PRE-TRADE
-// ══════════════════════════════════════════
-const CRT_TFS=[
-  {id:'1D', lbl:'Diario',w:3},
-  {id:'12H',lbl:'12 horas',w:2.5},
-  {id:'4H', lbl:'4 horas',w:2},
-  {id:'1H', lbl:'1 hora',w:1.5},
-  {id:'15m',lbl:'15 min — entrada',w:1},
-];
-const CRT_CONDS=[
-  {id:'TS',name:'TS',desc:'Turtle Soup'},
-  {id:'RO',name:'RO',desc:'Rango Operativo'},
-  {id:'RR',name:'RR',desc:'Rango Reiniciado'},
-  {id:'RA',name:'RA',desc:'Rango Activado'},
-];
-let crtS={};
-let crtSnaps=[];
-
-function crtInit(){
-  crtS={inst:'',dir:'',ses:'',rr:''};
-  CRT_TFS.forEach(tf=>{
-    CRT_CONDS.forEach(c=>{crtS[tf.id+'_'+c.id]='none';});
-    crtS[tf.id+'_note']='';
-  });
-}
-
-function crtTfStatus(tfId){
-  if(crtS[tfId+'_RR']==='yes')return'rr';
-  return CRT_CONDS.filter(c=>c.id!=='RR').some(c=>crtS[tfId+'_'+c.id]==='yes')?'confirmed':'none';
-}
-
-function crtToggle(tfId,condId){
-  const key=tfId+'_'+condId;
-  const cur=crtS[key]||'none';
-  if(condId==='RR'){crtS[key]=cur==='none'?'yes':'none';}
-  else{crtS[key]=cur==='none'?'yes':cur==='yes'?'no':'none';}
-  renderCRT();
-}
-
-function renderCRT(){
-  const el=document.getElementById('crt-app');
-  if(!el)return;
-  const tfStats=CRT_TFS.map(tf=>({...tf,st:crtTfStatus(tf.id)}));
-  const rrTFs=tfStats.filter(t=>t.st==='rr');
-  const confirmedTFs=tfStats.filter(t=>t.st==='confirmed');
-
-  // Score
-  let totalW=0,yesW=0,streak=true;
-  CRT_TFS.forEach(tf=>{
-    totalW+=tf.w;
-    if(streak&&crtTfStatus(tf.id)==='confirmed')yesW+=tf.w;
-    else streak=false;
-  });
-  const pct=totalW>0?Math.round((yesW/totalW)*100):0;
-
-  // Verdict
-  let vClass='',vIcon='',vTitle='',vMsg='',vColor='';
-  const inst=crtS.inst||'';
-  const dir=crtS.dir||'';
-  const ses=crtS.ses||'';
-  const rr=crtS.rr||'';
-  const has15m=CRT_CONDS.filter(c=>c.id!=='RR').some(c=>crtS['15m_'+c.id]==='yes');
-  const anyMarked=CRT_TFS.some(tf=>CRT_CONDS.some(c=>crtS[tf.id+'_'+c.id]!=='none'));
-  const rrMajor=rrTFs.filter(t=>t.id==='1D'||t.id==='12H');
-
-  if(!anyMarked){vClass='v-idle';vIcon='⬜';vTitle='Completa el análisis';vMsg='Marca las condiciones en cada temporalidad bajando de mayor a menor. Con un TS, RO o RA en cada TF ya es confirmación.';}
-  else if(!inst){vClass='v-wait';vIcon='⚠️';vTitle='Falta el instrumento';vMsg='Ingresa el par o activo que vas a operar.';}
-  else if(!dir||!ses){vClass='v-wait';vIcon='⚠️';vTitle='Selecciona dirección y sesión';vMsg='Define hacia dónde buscas el trade y en qué sesión.';}
-  else if(rrMajor.length>0){vClass='v-no';vIcon='🚫';vTitle=`NO operar — RR activo en ${rrMajor.map(t=>t.id).join(' y ')}`;vMsg=`Hay Rango Reiniciado en temporalidad mayor. Espera que ${rrMajor.map(t=>t.id).join(' y ')} complete su reinicio antes de buscar confirmaciones.`;}
-  else if(rrTFs.length>0){vClass='v-wait';vIcon='⚠️';vTitle=`ESPERAR — RR activo en ${rrTFs.map(t=>t.id).join(', ')}`;vMsg=`Hay Rango Reiniciado en ${rrTFs.map(t=>t.id).join(' y ')}. Los TFs mayores ya muestran dirección — espera el reinicio para entrar.`;}
-  else if(confirmedTFs.length===0){vClass='v-no';vIcon='🚫';vTitle='NO operar — sin confirmaciones';vMsg='No hay TS, RO ni RA confirmados. Espera que el mercado te dé el setup.';}
-  else if(pct>=65&&has15m){vClass='v-go';vIcon='✅';const rrText=rr?` — 1:${rr}`:'';vTitle=`OPERAR${rrText}`;const tfNames=confirmedTFs.map(t=>{const c=CRT_CONDS.filter(x=>x.id!=='RR'&&crtS[t.id+'_'+x.id]==='yes').map(x=>x.id);return t.id+'('+c.join('+')+')'}).join(' → ');vMsg=`Las temporalidades se alinean: ${tfNames}.`;}
-  else if(!has15m&&confirmedTFs.length>0){vClass='v-wait';vIcon='⚠️';vTitle='ESPERAR confirmación en 15m';vMsg=`TFs mayores alinean (${confirmedTFs.map(t=>t.id).join(', ')}). Espera que el 15m muestre TS, RO o RA para confirmar la entrada.`;}
-  else{vClass='v-wait';vIcon='⚠️';vTitle='Alineación parcial — sigue bajando temporalidades';vMsg=`${confirmedTFs.map(t=>t.id).join(', ')} confirmados. Continúa el análisis en TFs menores.`;}
-
-  const vColorMap={vgo:'#1D9E75','v-wait':'#EF9F27','v-no':'#E24B4A','v-idle':'var(--border2)'};
-  const pbarColor=vClass==='v-go'?'#1D9E75':vClass==='v-wait'?'#EF9F27':vClass==='v-no'?'#E24B4A':'var(--border2)';
-
-  // Alignment flow
-  const flowHTML=tfStats.map((t,i)=>{
-    const cls=t.st==='confirmed'?'crt-af-ok':t.st==='rr'?'crt-af-rr':'crt-af-empty';
-    const c=CRT_CONDS.filter(x=>x.id!=='RR'&&crtS[t.id+'_'+x.id]==='yes').map(x=>x.id);
-    const lbl=t.st==='rr'?t.id+' RR':t.st==='confirmed'?t.id+' '+c.join('+'):t.id;
-    return `<span class="crt-af-node ${cls}">${lbl}</span>${i<CRT_TFS.length-1?'<span class="crt-af-arr">→</span>':''}`;
-  }).join('');
-
-  // TF cards
-  const tfsHTML=CRT_TFS.map(tf=>{
-    const st=crtTfStatus(tf.id);
-    const hasRR=st==='rr';
-    const confirmed=st==='confirmed';
-    const confConds=CRT_CONDS.filter(c=>c.id!=='RR'&&crtS[tf.id+'_'+c.id]==='yes').map(c=>c.id);
-    const scoreColor=hasRR?'var(--amber)':confirmed?'var(--green)':'var(--text3)';
-    const scoreText=hasRR?'⚠ RR activo':confirmed?confConds.join('+')+' confirmado':'Sin confirmación';
-    const condsHTML=CRT_CONDS.map(c=>{
-      const key=tf.id+'_'+c.id;
-      const s=crtS[key]||'none';
-      const isRR=c.id==='RR';
-      let cls='crt-cb';
-      let icon,stTxt;
-      if(s==='yes'){if(isRR){cls+=' crt-cb-rr';icon='⚠';stTxt='Esperar';}else{cls+=' crt-cb-yes';icon='✓';stTxt='Confirmado';}}
-      else if(s==='no'){cls+=' crt-cb-no';icon='✕';stTxt='No presente';}
-      else{icon='–';stTxt='Sin marcar';}
-      return `<div class="${cls}" onclick="crtToggle('${tf.id}','${c.id}')">
-        <div style="font-size:16px">${icon}</div>
-        <div style="font-size:12px;font-weight:600">${c.name}</div>
-        <div style="font-size:10px;opacity:.8">${c.desc}</div>
-        <div style="font-size:10px;font-weight:500;margin-top:2px">${stTxt}</div>
-        ${isRR&&s==='yes'?'<div style="position:absolute;top:-6px;right:-6px;background:var(--amber);color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px">ESPERAR</div>':''}
-      </div>`;
-    }).join('');
-    return `<div class="crt-tf-card2${hasRR?' crt-tf-rr':confirmed?' crt-tf-ok':''}">
-      <div class="crt-tf-head2">
-        <span class="crt-tf-badge2">${tf.id}</span>
-        <span style="font-size:13px;color:var(--text2);flex:1">${tf.lbl}</span>
-        <span style="font-size:12px;color:${scoreColor}">${scoreText}</span>
-      </div>
-      <div class="crt-conds2">${condsHTML}</div>
-      <div style="padding:0 14px 12px">
-        <textarea style="width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font-main);font-size:12px;padding:7px 10px;border-radius:8px;resize:none;line-height:1.5" rows="2" placeholder="¿Qué ves en ${tf.id}?" oninput="crtS['${tf.id}_note']=this.value">${crtS[tf.id+'_note']||''}</textarea>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Snapshots
-  const snapsHTML=crtSnaps.length?`<div class="card" style="margin-top:16px">
-    <div class="card-title">Análisis guardados</div>
-    ${crtSnaps.map((s,i)=>`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
-      <div style="flex:1"><div style="font-size:13px;font-weight:600">${s.inst||'Sin instrumento'} ${s.dir||''} ${s.ses||''}</div><div style="font-size:11px;color:var(--text3)">${s.date}</div></div>
-      <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="crtLoadSnap(${i})">Cargar</button>
-      <button class="btn-danger-sm" onclick="crtDeleteSnap(${i})"><i class="fa fa-trash"></i></button>
-    </div>`).join('')}
-  </div>`:'';
-
-  el.innerHTML=`
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:12px;flex-wrap:wrap">
-      <div>
-        <div style="font-size:16px;font-weight:700">Analizador CRT pre-trade</div>
-        <div style="font-size:12px;color:var(--text2);margin-top:3px">TS = Turtle Soup · RO = Rango Operativo · RR = Rango Reiniciado · RA = Rango Activado</div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" onclick="crtSaveSnap()"><i class="fa fa-camera"></i> Guardar</button>
-        <button class="btn btn-ghost" onclick="crtReset()"><i class="fa fa-rotate-left"></i> Nuevo</button>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem">
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <label style="font-size:12px;color:var(--text2);font-weight:500">Instrumento</label>
-        <input type="text" placeholder="GBPUSD, NQ..." value="${crtS.inst||''}" oninput="crtS.inst=this.value;renderCRT()" style="height:36px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:14px;padding:0 10px">
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <label style="font-size:12px;color:var(--text2);font-weight:500">Dirección</label>
-        <select onchange="crtS.dir=this.value;renderCRT()" style="height:36px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:14px;padding:0 10px">
-          <option value="">— Seleccionar —</option>
-          <option value="Long" ${crtS.dir==='Long'?'selected':''}>Long (compra)</option>
-          <option value="Short" ${crtS.dir==='Short'?'selected':''}>Short (venta)</option>
-        </select>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <label style="font-size:12px;color:var(--text2);font-weight:500">Sesión</label>
-        <select onchange="crtS.ses=this.value;renderCRT()" style="height:36px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:14px;padding:0 10px">
-          <option value="">— Seleccionar —</option>
-          <option value="Londres" ${crtS.ses==='Londres'?'selected':''}>Londres</option>
-          <option value="Nueva York" ${crtS.ses==='Nueva York'?'selected':''}>Nueva York</option>
-          <option value="Asia" ${crtS.ses==='Asia'?'selected':''}>Asia</option>
-          <option value="Londres+NY" ${crtS.ses==='Londres+NY'?'selected':''}>Londres + NY</option>
-        </select>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <label style="font-size:12px;color:var(--text2);font-weight:500">Gestión R:R</label>
-        <select onchange="crtS.rr=this.value;renderCRT()" style="height:36px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:14px;padding:0 10px">
-          <option value="">— Seleccionar —</option>
-          <option value="1" ${crtS.rr==='1'?'selected':''}>1:1 — viernes</option>
-          <option value="2" ${crtS.rr==='2'?'selected':''}>1:2 — estándar</option>
-          <option value="3" ${crtS.rr==='3'?'selected':''}>1:3 — alta confluencia</option>
-          <option value="4" ${crtS.rr==='4'?'selected':''}>1:4+ — perfecto</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="crt-verdict2 crt-v-${vClass}">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <span style="font-size:22px">${vIcon}</span>
-        <span style="font-size:15px;font-weight:700">${vTitle}</span>
-      </div>
-      <div style="font-size:13px;line-height:1.6">${vMsg}</div>
-      ${anyMarked?`<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:10px">${flowHTML}</div>`:''}
-      ${anyMarked?`<div style="margin-top:10px;display:flex;align-items:center;gap:10px"><div style="flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;width:${pct}%;background:${pbarColor};transition:width .4s"></div></div><span style="font-size:12px;color:var(--text2)">${pct}%</span></div>`:''}
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem">${tfsHTML}</div>
-    ${snapsHTML}
-  `;
-}
-
-function crtReset(){
-  crtInit();
-  renderCRT();
-}
-
-function crtSaveSnap(){
-  const snap={...crtS,date:new Date().toLocaleString('es')};
-  crtSnaps.unshift(snap);
-  if(crtSnaps.length>10)crtSnaps.pop();
-  saveCRT2();
-  renderCRT();
-  notify('Análisis CRT guardado');
-}
-
-function crtLoadSnap(i){
-  const s=crtSnaps[i];
-  crtS={...s};
-  renderCRT();
-  notify('Análisis cargado');
-}
-
-function crtDeleteSnap(i){
-  crtSnaps.splice(i,1);
-  saveCRT2();
-  renderCRT();
-}
-
-function saveCRT2(){
-  try{localStorage.setItem('tj_crt2_v1',JSON.stringify({s:crtS,snaps:crtSnaps}));}catch(e){}
-  scheduleSyncSave();
-}
-
-function loadCRT2(){
-  try{const r=localStorage.getItem('tj_crt2_v1');if(r){const p=JSON.parse(r);crtS=p.s||{};crtSnaps=p.snaps||[];}}catch(e){}
 }
 
 // ══════════════════════════════════════════
