@@ -672,19 +672,7 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-<!-- ─── CRT SNAPSHOT MODAL ─── -->
-<div class="modal-overlay" id="crt-snap-modal">
-  <div class="modal" style="max-width:420px">
-    <button class="modal-close" onclick="closeModal('crt-snap-modal')"><i class="fa fa-xmark"></i></button>
-    <div style="font-size:15px;font-weight:700;margin-bottom:14px">Guardar análisis CRT</div>
-    <div class="fg" style="margin-bottom:12px"><label>Descripción / Instrumento</label><input type="text" id="crt-snap-desc" placeholder="EUR/USD setup CRT largo..."></div>
-    <div class="fg" style="margin-bottom:16px"><label>Nota adicional</label><textarea id="crt-snap-note" placeholder="Contexto del mercado..."></textarea></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-ghost" onclick="closeModal('crt-snap-modal')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmSaveCRTSnapshot()"><i class="fa fa-save"></i> Guardar</button>
-    </div>
-  </div>
-</div>
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
@@ -1331,133 +1319,7 @@ function renderAnalisis(){
   document.getElementById('adv-stats').innerHTML=`<div class="item"><span>Expectativa matemática</span><span style="color:${exp>=0?'var(--green)':'var(--red)'}">$${exp.toFixed(2)}</span></div><div class="item"><span>Avg ganancia</span><span style="color:var(--green)">$${s.avgWin.toFixed(0)}</span></div><div class="item"><span>Avg pérdida</span><span style="color:var(--red)">-$${s.avgLoss.toFixed(0)}</span></div><div class="item"><span>R:R promedio</span><span>${s.avgRR.toFixed(2)}</span></div><div class="item"><span>Profit Factor</span><span style="color:${s.pf>=1.5?'var(--green)':s.pf<1?'var(--red)':'var(--amber)'}">${s.pf>=99?'∞':s.pf.toFixed(2)}</span></div><div class="item"><span>Mejor racha ganadora</span><span style="color:var(--green)">+${s.bestStreak}</span></div><div class="item"><span>Peor racha perdedora</span><span style="color:var(--red)">${s.worstStreak}</span></div>`;
 }
 
-// ══════════════════════════════════════════
-// CRT STRATEGY
-// ══════════════════════════════════════════
-const CRT_TIMEFRAMES=[
-  {label:'1D',conditions:['TS','RA','RO','RI']},
-  {label:'12H',conditions:['TS','RA','RO','RI']},
-  {label:'4H',conditions:['TS','RA','RO','RI']},
-  {label:'1H',conditions:['TS','RA','RO','RI']},
-  {label:'15m',conditions:['TS','RA','RO','RI']},
-];
-const CRT_LABELS={
-  TS:'Tendencia / Sesgo',
-  RA:'Rango (Range)',
-  RO:'Rechazo / Order Block',
-  RI:'Ruptura / Imbalance',
-};
 
-function renderCRT(){
-  const tf=document.getElementById('crt-timeframes');
-  tf.innerHTML=CRT_TIMEFRAMES.map(({label,conditions})=>{
-    const cards=conditions.map(c=>{
-      const key=`${label}_${c}`;
-      const state=crtState[key]||'none'; // 'none' | 'yes' | 'no'
-      const cls=state==='yes'?'crt-cond yes':state==='no'?'crt-cond no':'crt-cond';
-      const icon=state==='yes'?'✅':state==='no'?'❌':'⬜';
-      const statusTxt=state==='yes'?'Cumple':state==='no'?'No cumple':'Sin marcar';
-      return `<div class="${cls}" onclick="toggleCRT('${label}','${c}',this)">
-        <div class="crt-cond-icon">${icon}</div>
-        <div class="crt-cond-label">${c}</div>
-        <div style="font-size:10px;color:inherit;opacity:.8">${CRT_LABELS[c]||c}</div>
-        <div class="crt-cond-status" style="margin-top:4px">${statusTxt}</div>
-      </div>`;
-    }).join('');
-    // score for this TF
-    const yesCount=conditions.filter(c=>crtState[`${label}_${c}`]==='yes').length;
-    const totalCount=conditions.length;
-    const scoreColor=yesCount===totalCount?'var(--green)':yesCount>=totalCount*.5?'var(--amber)':'var(--red)';
-    return `<div class="crt-tf-card">
-      <div class="crt-tf-header">
-        <div class="crt-tf-label" style="background:var(--bg4);padding:4px 10px;border-radius:6px">${label}</div>
-        <div style="font-size:12px;color:var(--text2)">Temporalidad</div>
-        <div class="crt-tf-score" style="color:${scoreColor}">${yesCount}/${totalCount} cumple</div>
-      </div>
-      <div class="crt-conditions">${cards}</div>
-    </div>`;
-  }).join('');
-  updateCRTSummary();
-  renderCRTSnapshots();
-}
-
-function toggleCRT(tf,cond,el){
-  const key=`${tf}_${cond}`;
-  const cur=crtState[key]||'none';
-  const next=cur==='none'?'yes':cur==='yes'?'no':'none';
-  crtState[key]=next;
-  saveCRT();
-  renderCRT();
-}
-
-function updateCRTSummary(){
-  let total=0,yes=0;
-  CRT_TIMEFRAMES.forEach(({label,conditions})=>{
-    conditions.forEach(c=>{total++;if(crtState[`${label}_${c}`]==='yes')yes++;});
-  });
-  const pct=total?Math.round((yes/total)*100):0;
-  // Ring
-  const circumference=213.63;
-  const offset=circumference-(circumference*(pct/100));
-  const ring=document.getElementById('crt-ring-circle');
-  if(ring){
-    ring.style.strokeDashoffset=offset;
-    ring.style.stroke=pct>=80?'#00d4aa':pct>=50?'#f59e0b':'#ff4d6a';
-  }
-  const pctEl=document.getElementById('crt-pct');
-  if(pctEl)pctEl.textContent=pct+'%';
-
-  const verdict=document.getElementById('crt-verdict');
-  const summaryText=document.getElementById('crt-summary-text');
-  if(pct>=80){
-    if(verdict){verdict.className='crt-verdict go';verdict.textContent='✅ OPERAR';}
-    if(summaryText)summaryText.textContent=`${yes} de ${total} condiciones cumplen. Confluencia alta — setup válido para operar.`;
-  } else if(pct>=50){
-    if(verdict){verdict.className='crt-verdict caution';verdict.textContent='⚠️ PRECAUCIÓN';}
-    if(summaryText)summaryText.textContent=`${yes} de ${total} condiciones cumplen. Confluencia parcial — evalúa con cuidado.`;
-  } else {
-    if(verdict){verdict.className='crt-verdict no-go';verdict.textContent='🚫 NO OPERAR';}
-    if(summaryText)summaryText.textContent=`${yes} de ${total} condiciones cumplen. Confluencia insuficiente — no entrar al mercado.`;
-  }
-}
-
-function resetCRT(){
-  if(!confirm('¿Resetear todas las condiciones CRT?'))return;
-  crtState={};saveCRT();renderCRT();notify('CRT reseteado');
-}
-
-function saveCRTSnapshot(){openModal('crt-snap-modal');}
-function confirmSaveCRTSnapshot(){
-  const desc=document.getElementById('crt-snap-desc').value.trim()||'Análisis sin título';
-  const note=document.getElementById('crt-snap-note').value.trim();
-  const snap={id:Date.now().toString(36),date:new Date().toISOString().slice(0,10),time:new Date().toTimeString().slice(0,5),desc,note,state:{...crtState}};
-  crtSnapshots.unshift(snap);if(crtSnapshots.length>20)crtSnapshots.pop();
-  saveCRT();closeModal('crt-snap-modal');renderCRTSnapshots();notify('Análisis CRT guardado');
-}
-
-function renderCRTSnapshots(){
-  const card=document.getElementById('crt-snapshots-card');
-  const list=document.getElementById('crt-snapshots-list');
-  if(!card||!list)return;
-  if(!crtSnapshots.length){card.style.display='none';return;}
-  card.style.display='block';
-  list.innerHTML=crtSnapshots.map((s,i)=>{
-    const total=Object.keys(s.state).length;
-    const yes=Object.values(s.state).filter(v=>v==='yes').length;
-    return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${s.desc}</div>
-        <div style="font-size:11px;color:var(--text3)">${s.date} ${s.time} · ${yes}/${total} condiciones cumplidas</div>
-        ${s.note?`<div style="font-size:11px;color:var(--text2);margin-top:4px">${s.note}</div>`:''}
-      </div>
-      <button onclick="loadCRTSnapshot(${i})" class="btn btn-ghost" style="font-size:11px;padding:5px 10px">Cargar</button>
-      <button onclick="deleteCRTSnapshot(${i})" class="btn-danger-sm"><i class="fa fa-trash"></i></button>
-    </div>`;
-  }).join('');
-}
-
-function loadCRTSnapshot(i){crtState={...crtSnapshots[i].state};saveCRT();renderCRT();notify('Análisis cargado');}
-function deleteCRTSnapshot(i){crtSnapshots.splice(i,1);saveCRT();renderCRTSnapshots();notify('Análisis eliminado');}
 
 // ══════════════════════════════════════════
 // TRADE FORMS
