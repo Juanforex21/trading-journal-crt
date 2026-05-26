@@ -1683,8 +1683,8 @@ function parseMT5HTML(html,fname){
       const tipoText=getText(3).toLowerCase();
       const size=parseNum(getText(4));
       const entrada=parseNum(getText(5));
-      if(!symbol||symbol.length<2||symbol.match(/^[0-9.,$-]+$/))return;
-      if(tipoText!=='buy'&&tipoText!=='sell'&&!tipoText.includes('long')&&!tipoText.includes('short'))return;
+      if(!symbol||symbol.length<2||/^[\d.,\s$€£¥\-\+%]+$/.test(symbol))return;
+      if(!tipoText||(!tipoText.includes('buy')&&!tipoText.includes('sell')&&!tipoText.includes('long')&&!tipoText.includes('short')))return;
       // Find close date index (first cell after index 6 that matches date pattern)
       let closeDateIdx=-1;
       for(let i=6;i<cells.length;i++){
