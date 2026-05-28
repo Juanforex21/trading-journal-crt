@@ -1910,11 +1910,30 @@ function renderCRT(){
   // Snapshots
   const snapsHTML=crtSnaps.length?`<div class="card" style="margin-top:16px">
     <div class="card-title">Análisis guardados</div>
-    ${crtSnaps.map((s,i)=>`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
-      <div style="flex:1"><div style="font-size:13px;font-weight:600">${s.inst||'Sin instrumento'} ${s.dir||''} ${s.ses||''}</div><div style="font-size:11px;color:var(--text3)">${s.date}</div></div>
-      <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="crtLoadSnap(${i})">Cargar</button>
-      <button class="btn-danger-sm" onclick="crtDeleteSnap(${i})"><i class="fa fa-trash"></i></button>
-    </div>`).join('')}
+    ${crtSnaps.map((s,i)=>{
+      const tfs=['1D','12H','4H','1H','15m'];
+      const conds=['TS','RO','RA'];
+      const confirmed=tfs.filter(tf=>conds.some(c=>s[tf+'_'+c]==='yes')).length;
+      const status=confirmed===5?'full':confirmed>0?'partial':'none';
+      const borderColor=status==='full'?'var(--green)':status==='partial'?'#b5880a':'var(--border)';
+      const bgColor=status==='full'?'var(--green2)':status==='partial'?'rgba(181,136,10,0.08)':'var(--bg3)';
+      const statusBadge=status==='full'
+        ?`<span style="font-size:10px;color:var(--green);background:var(--green2);padding:2px 8px;border-radius:20px;border:1px solid var(--green3)"><i class="fa fa-check-circle"></i> Completo</span>`
+        :status==='partial'
+        ?`<span style="font-size:10px;color:#b5880a;background:rgba(181,136,10,0.12);padding:2px 8px;border-radius:20px;border:1px solid #b5880a"><i class="fa fa-circle-half-stroke"></i> ${confirmed}/5 TFs</span>`
+        :'';
+      return `<div style="background:${bgColor};border:2px solid ${borderColor};border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:all .2s">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">
+            <div style="font-size:13px;font-weight:700">${s.inst||'Sin instrumento'} ${s.dir||''} ${s.ses||''}</div>
+            ${statusBadge}
+          </div>
+          <div style="font-size:11px;color:var(--text3)">${s.date}${s.rr?' · R:R 1:'+s.rr:''}</div>
+        </div>
+        <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="crtLoadSnap(${i})">Cargar</button>
+        <button class="btn-danger-sm" onclick="crtDeleteSnap(${i})"><i class="fa fa-trash"></i></button>
+      </div>`;
+    }).join('')}
   </div>`:'';
 
   el.innerHTML=`
