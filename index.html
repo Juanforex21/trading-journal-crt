@@ -2137,6 +2137,7 @@ function openSnapDetail(i){
 
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <button class="btn btn-primary" style="flex:1" onclick="crtLoadSnap(${i});closeModal('crt-snap-modal')"><i class="fa fa-upload"></i> Cargar en analizador</button>
+      <button class="btn btn-ghost" style="padding:7px 14px" onclick="openSnapEdit(${i})"><i class="fa fa-pen"></i> Modificar</button>
       <button class="btn-danger-sm" style="padding:7px 14px" onclick="crtDeleteSnap(${i});closeModal('crt-snap-modal')"><i class="fa fa-trash"></i> Eliminar</button>
     </div>
 
@@ -2182,6 +2183,43 @@ function removeSnapImg(snapIdx,tf){
   crtSnaps[snapIdx]['img_'+tf]='';
   saveCRT2();
   openSnapDetail(snapIdx);
+}
+
+function openSnapEdit(i){
+  // Load snap into analyzer
+  crtLoadSnap(i);
+  closeModal('crt-snap-modal');
+  // Mark which snap we're editing so save updates it
+  window._editingSnapIdx=i;
+  // Show edit mode indicator
+  notify('✏️ Editando análisis — modifica y guarda');
+  // Update save button to say "Guardar cambios"
+  const saveBtn=document.querySelector('[onclick="crtSaveSnap()"]');
+  if(saveBtn){
+    saveBtn.innerHTML='<i class="fa fa-save"></i> Guardar cambios';
+    saveBtn.style.background='var(--amber)';
+    saveBtn.style.color='#000';
+    saveBtn.setAttribute('onclick','crtSaveEdit()');
+  }
+}
+
+function crtSaveEdit(){
+  const i=window._editingSnapIdx;
+  if(i===undefined||i===null||!crtSnaps[i]){
+    // fallback: save as new
+    crtSaveSnap();
+    return;
+  }
+  // Preserve existing images
+  const existingImgs={};
+  const tfs=['1D','12H','4H','1H','15m'];
+  tfs.forEach(tf=>{if(crtSnaps[i]['img_'+tf])existingImgs['img_'+tf]=crtSnaps[i]['img_'+tf];});
+  // Update the snap with current state
+  crtSnaps[i]={...crtS,...existingImgs,date:crtSnaps[i].date+' (editado '+new Date().toLocaleTimeString('es')+')'};
+  window._editingSnapIdx=null;
+  saveCRT2();
+  renderCRT();
+  notify('✅ Análisis actualizado');
 }
 
 function saveCRT2(){
