@@ -807,21 +807,9 @@ function scheduleSync(){
 
 function showSyncStatus(state){
   const el=document.getElementById('sync-status');if(!el)return;
-  if(state==='syncing'){
-    el.innerHTML='<i class="fa fa-rotate fa-spin"></i> Sincronizando...';
-    el.style.color='var(--amber)';
-  } else if(state==='ok'){
-    el.innerHTML='<i class="fa fa-cloud-arrow-up"></i> Sincronizado';
-    el.style.color='var(--green)';
-    setTimeout(()=>{
-      const e=document.getElementById('sync-status');
-      if(e){e.innerHTML='<i class="fa fa-cloud"></i> Nube';e.style.color='var(--green)';}
-    },2500);
-  } else {
-    // local
-    el.innerHTML='<i class="fa fa-circle-check"></i> Local';
-    el.style.color='var(--text3)';
-  }
+  if(state==='syncing'){el.innerHTML='<i class="fa fa-rotate fa-spin"></i> Sincronizando...';el.style.color='var(--amber)';}
+  else if(state==='ok'){el.innerHTML='<i class="fa fa-cloud-arrow-up"></i> Sincronizado';el.style.color='var(--green)';setTimeout(()=>{const e=document.getElementById('sync-status');if(e){e.innerHTML='<i class="fa fa-cloud"></i> Nube';e.style.color='var(--text3)';}},2500);}
+  else{const e=document.getElementById('sync-status');if(e){e.innerHTML='<i class="fa fa-circle-check"></i> Local';e.style.color='var(--text3)';}}
 }
 
 // ══════════════════════════════════════════
@@ -872,10 +860,7 @@ function saveTheme(){try{localStorage.setItem(SK_THEME,isDark?'dark':'light');}c
 
 // Sync button in topbar
 async function doManualSync(){
-  if(!_sbToken){
-    openSyncModal();
-    return;
-  }
+  if(!_sbToken){openSyncModal();return;}
   showSyncStatus('syncing');
   await sbPull();
   renderAccountSelect();renderDashboard();
