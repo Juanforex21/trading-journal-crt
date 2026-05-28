@@ -323,7 +323,7 @@ tbody tr:last-child td{border-bottom:none}
     <div class="topbar-title" id="topbar-title">Dashboard</div>
     <div class="topbar-actions">
       <span id="topbar-account" style="font-size:12px;color:var(--text3);font-family:var(--font-mono)"></span>
-      <span id="sync-status" onclick="doManualSync()" title="Clic para sincronizar / configurar nube" style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 8px;border-radius:6px;border:1px solid var(--border)"><i class="fa fa-cloud"></i> Local</span>
+      <span id="sync-status" style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:5px"><i class="fa fa-cloud"></i> Conectando...</span>
       <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema"><i class="fa fa-moon"></i></button>
       <button class="btn btn-primary" onclick="nav('nuevo',document.querySelectorAll('.nav-item')[1])"><i class="fa fa-plus"></i> Nuevo trade</button>
       <button class="theme-toggle" onclick="doLogout()" title="Cerrar sesión" style="color:var(--red)"><i class="fa fa-right-from-bracket"></i></button>
@@ -674,14 +674,6 @@ tbody tr:last-child td{border-bottom:none}
 
 
 
-<!-- SYNC MODAL -->
-<div class="modal-overlay" id="sync-modal">
-  <div class="modal" style="max-width:440px">
-    <button class="modal-close" onclick="closeModal('sync-modal')"><i class="fa fa-xmark"></i></button>
-    <div id="sync-modal-content"></div>
-  </div>
-</div>
-
 <!-- CRT SNAP DETAIL MODAL -->
 <div class="modal-overlay" id="crt-snap-modal">
   <div class="modal" style="max-width:680px">
@@ -708,8 +700,6 @@ const SK_THEME='tj_theme_v1';
 const SB_URL='https://buoswluvrevchzotnrlh.supabase.co';
 const SB_KEY='sb_publishable_o405ZlCJZYMVIOn37TUGKA_mnwaBieN';
 let _sbToken=null;
-let _sbUser=null;
-let _syncTimer=null;
 let _currentUser=null;
 let trades=[], charts={}, calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 let currentAccount='real';
@@ -719,97 +709,25 @@ let crtSnapshots=[];
 let pendingTrades=[], pendingNotionTrades=[];
 let tradeDetails={};
 let isDark=true;
+let _syncTimeout=null;
+
 
 // ══════════════════════════════════════════
-// SUPABASE SYNC
+// SYNC — solo localStorage
 // ══════════════════════════════════════════
-
-function getSbSession(){
-  try{const s=JSON.parse(localStorage.getItem('tj_sb_session'));if(s&&s.token&&s.email){return s;}return null;}catch(e){return null;}
-}
-
-async function sbAuth(email,pass){
-  try{
-    const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{
-      method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY},
-      body:JSON.stringify({email,password:pass})
-    });
-    const d=await r.json();
-    if(d.access_token){
-      _sbToken=d.access_token;_sbUser=email;
-      localStorage.setItem('tj_sb_session',JSON.stringify({token:d.access_token,email,exp:Date.now()+3500000}));
-      return{ok:true};
-    }
-    return{ok:false,msg:d.error_description||'Error de login'};
-  }catch(e){return{ok:false,msg:'Sin conexión'};}
-}
-
-async function sbPush(){
-  if(!_sbToken||!_sbUser)return false;
-  try{
-    // Push trades
-    const rows=trades.map(t=>({...t,user_email:_sbUser}));
-    await fetch(SB_URL+'/rest/v1/trades',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+_sbToken,'Prefer':'resolution=merge-duplicates,return=minimal'},
-      body:JSON.stringify(rows)
-    });
-    // Push accounts + crt as meta
-    await fetch(SB_URL+'/rest/v1/journal_meta',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+_sbToken,'Prefer':'resolution=merge-duplicates,return=minimal'},
-      body:JSON.stringify([
-        {id:_sbUser+'_accounts',user_email:_sbUser,key:'accounts',value:JSON.stringify(accounts),updated_at:new Date().toISOString()},
-        {id:_sbUser+'_crt',user_email:_sbUser,key:'crt',value:JSON.stringify({s:crtS,snaps:crtSnaps}),updated_at:new Date().toISOString()}
-      ])
-    });
-    return true;
-  }catch(e){return false;}
-}
-
-async function sbPull(){
-  if(!_sbToken||!_sbUser)return false;
-  try{
-    // Pull trades
-    const r=await fetch(SB_URL+'/rest/v1/trades?user_email=eq.'+encodeURIComponent(_sbUser)+'&order=fecha.desc',{
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
-    });
-    const cloudTrades=await r.json();
-    if(Array.isArray(cloudTrades)&&cloudTrades.length){trades=cloudTrades;localStorage.setItem(SK,JSON.stringify(trades));}
-
-    // Pull accounts
-    const r2=await fetch(SB_URL+'/rest/v1/journal_meta?id=eq.'+encodeURIComponent(_sbUser+'_accounts'),{
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
-    });
-    const metaAcc=await r2.json();
-    if(Array.isArray(metaAcc)&&metaAcc.length){accounts=JSON.parse(metaAcc[0].value);localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));}
-
-    // Pull CRT
-    const r3=await fetch(SB_URL+'/rest/v1/journal_meta?id=eq.'+encodeURIComponent(_sbUser+'_crt'),{
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
-    });
-    const metaCrt=await r3.json();
-    if(Array.isArray(metaCrt)&&metaCrt.length){const p=JSON.parse(metaCrt[0].value);crtS=p.s||{};crtSnaps=p.snaps||[];}
-
-    return true;
-  }catch(e){return false;}
-}
-
-function scheduleSync(){
-  clearTimeout(_syncTimer);
-  _syncTimer=setTimeout(async()=>{
-    if(!_sbToken)return;
-    showSyncStatus('syncing');
-    const ok=await sbPush();
-    showSyncStatus(ok?'ok':'local');
-  },1500);
+function scheduleSyncSave(){
+  // Solo guarda en localStorage por ahora
+  try{localStorage.setItem(SK,JSON.stringify(trades));}catch(e){}
+  try{localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));}catch(e){}
+  showSyncStatus('ok');
 }
 
 function showSyncStatus(state){
-  const el=document.getElementById('sync-status');if(!el)return;
-  if(state==='syncing'){el.innerHTML='<i class="fa fa-rotate fa-spin"></i> Sincronizando...';el.style.color='var(--amber)';}
-  else if(state==='ok'){el.innerHTML='<i class="fa fa-cloud-arrow-up"></i> Sincronizado';el.style.color='var(--green)';setTimeout(()=>{const e=document.getElementById('sync-status');if(e){e.innerHTML='<i class="fa fa-cloud"></i> Nube';e.style.color='var(--text3)';}},2500);}
-  else{const e=document.getElementById('sync-status');if(e){e.innerHTML='<i class="fa fa-circle-check"></i> Local';e.style.color='var(--text3)';}}
+  const el=document.getElementById('sync-status');
+  if(!el)return;
+  if(state==='syncing'){el.innerHTML='<i class="fa fa-rotate fa-spin"></i> Guardando...';el.style.color='var(--amber)';}
+  else if(state==='ok'||state==='local'){el.innerHTML='<i class="fa fa-check-circle"></i> Guardado';el.style.color='var(--green)';setTimeout(()=>{const e2=document.getElementById('sync-status');if(e2){e2.innerHTML='<i class="fa fa-circle-check"></i> Local';e2.style.color='var(--text3)';}},2000);}
+  else{const e2=document.getElementById('sync-status');if(e2){e2.innerHTML='<i class="fa fa-circle-check"></i> Local';e2.style.color='var(--text3)';}}
 }
 
 // ══════════════════════════════════════════
@@ -818,109 +736,42 @@ function showSyncStatus(state){
 const DEFAULT_ACCOUNTS=[{"id":"acc_mpm0cg5v","name":"The5ers25k","type":"prop","balance":25000,"emoji":"🏆"},{"id":"acc_mpm35dgr","name":"the5ers5k","type":"prop","balance":5000,"emoji":"🏆"}];
 
 async function loadData(){
-  // Check saved Supabase session
-  const sess=getSbSession();
-  if(sess&&Date.now()<(sess.exp||0)){
-    _sbToken=sess.token;_sbUser=sess.email;
-    showSyncStatus('syncing');
-    const pulled=await sbPull();
-    if(pulled){showSyncStatus('ok');}
-    else showSyncStatus('local');
-  }
-
-  // Load from localStorage (fallback or after pull)
+  // Trades
   try{const r=localStorage.getItem(SK);if(r)trades=JSON.parse(r);}catch(e){trades=[];}
   if(!trades.length)trades=sample();
+
+  // Accounts
   try{const r=localStorage.getItem(SK_ACCOUNTS);if(r)accounts=JSON.parse(r);}catch(e){accounts=[];}
   if(!accounts.length)accounts=DEFAULT_ACCOUNTS;
+
+  // Set currentAccount to first valid account
   if(!accounts.find(a=>a.id===currentAccount))currentAccount=accounts[0].id;
 
+  // CRT
   try{const r=localStorage.getItem(SK_CRT);if(r){const p=JSON.parse(r);crtState=p.state||{};crtSnapshots=p.snapshots||[];}}catch(e){}
   try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
 
-  loadCRT2();loadTradeDetails();applyTheme();renderAccountSelect();renderDashboard();
-  if(!_sbToken)showSyncStatus('local');
+  loadCRT2();
+  loadTradeDetails();
+  applyTheme();
+  renderAccountSelect();
+  renderDashboard();
+  showSyncStatus('local');
 }
 
-function load(){loadData();}
+function load(){ loadData(); }
 
 function save(){
   try{localStorage.setItem(SK,JSON.stringify(trades));}catch(e){}
-  scheduleSync();
+  showSyncStatus('ok');
 }
 function saveAccounts(){
   try{localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));}catch(e){}
-  scheduleSync();
 }
 function saveCRT(){
   try{localStorage.setItem(SK_CRT,JSON.stringify({state:crtState,snapshots:crtSnapshots}));}catch(e){}
-  scheduleSync();
 }
 function saveTheme(){try{localStorage.setItem(SK_THEME,isDark?'dark':'light');}catch(e){}}
-
-// Sync button in topbar
-async function doManualSync(){
-  if(!_sbToken){openSyncModal();return;}
-  showSyncStatus('syncing');
-  await sbPull();
-  renderAccountSelect();renderDashboard();
-  const ok=await sbPush();
-  showSyncStatus(ok?'ok':'local');
-  notify(ok?'✅ Sincronizado correctamente':'⚠️ Sin conexión — datos locales');
-}
-
-// Sync setup modal
-function openSyncModal(){
-  const sess=getSbSession();
-  document.getElementById('sync-modal-content').innerHTML=`
-    <div style="font-size:16px;font-weight:700;margin-bottom:6px">☁️ Sincronización en la nube</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">Conecta tu cuenta para que los datos se sincronicen automáticamente entre tu PC y celular.</div>
-    ${_sbToken?`<div style="background:var(--green2);border:1px solid var(--green3);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--green);margin-bottom:14px"><i class="fa fa-check-circle"></i> Conectado como <strong>${_sbUser}</strong></div>`:''}
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
-      <div class="fg"><label>Correo</label><input type="email" id="sync-email" value="${sess?sess.email:''}" placeholder="tu@correo.com" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-family:var(--font-main);font-size:13px;width:100%"></div>
-      <div class="fg"><label>Contraseña</label><input type="password" id="sync-pass" placeholder="••••••••" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-family:var(--font-main);font-size:13px;width:100%"></div>
-    </div>
-    <div id="sync-error" style="display:none;background:var(--red2);border:1px solid var(--red3);color:var(--red);padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-primary" style="flex:1" id="sync-btn" onclick="doSyncLogin()"><i class="fa fa-cloud"></i> Conectar y sincronizar</button>
-      ${_sbToken?`<button class="btn btn-ghost" onclick="doSyncLogout()"><i class="fa fa-right-from-bracket"></i> Desconectar</button>`:''}
-    </div>
-  `;
-  openModal('sync-modal');
-}
-
-async function doSyncLogin(){
-  const email=document.getElementById('sync-email').value.trim();
-  const pass=document.getElementById('sync-pass').value;
-  const btn=document.getElementById('sync-btn');
-  const err=document.getElementById('sync-error');
-  if(!email||!pass){err.textContent='Ingresa tu correo y contraseña.';err.style.display='block';return;}
-  btn.textContent='Conectando...';btn.disabled=true;
-  const res=await sbAuth(email,pass);
-  if(res.ok){
-    err.style.display='none';
-    showSyncStatus('syncing');
-    // Push local data first, then pull cloud
-    await sbPush();
-    await sbPull();
-    renderAccountSelect();renderDashboard();
-    showSyncStatus('ok');
-    closeModal('sync-modal');
-    notify('✅ Conectado y sincronizado. Datos disponibles en todos tus dispositivos.');
-  } else {
-    err.textContent=res.msg;err.style.display='block';
-  }
-  btn.innerHTML='<i class="fa fa-cloud"></i> Conectar y sincronizar';btn.disabled=false;
-}
-
-function doSyncLogout(){
-  _sbToken=null;_sbUser=null;
-  localStorage.removeItem('tj_sb_session');
-  closeModal('sync-modal');
-  showSyncStatus('local');
-  notify('Desconectado de la nube');
-}
-
 
 
 // ══════════════════════════════════════════
@@ -2395,7 +2246,7 @@ function removeSnapImg(snapIdx,tf){
 
 function saveCRT2(){
   try{localStorage.setItem('tj_crt2_v1',JSON.stringify({s:crtS,snaps:crtSnaps}));}catch(e){}
-  scheduleSync();
+  scheduleSyncSave();
 }
 
 function loadCRT2(){
