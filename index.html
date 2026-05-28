@@ -744,6 +744,7 @@ async function loadData(){
   try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
 
   loadCRT2();
+  loadTradeDetails();
   applyTheme();
   renderAccountSelect();
   renderDashboard();
@@ -1064,6 +1065,7 @@ function openTradeDetail(id){
 
 function renderTradeDetailModal(t,td){
   const id=t.id;
+  const pnlNeto=Number(t.pnl)+(Number(t.comision)||0);
   document.getElementById('trade-modal-content').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <span class="badge badge-${t.dir.toLowerCase()}">${t.dir}</span>
@@ -1084,44 +1086,80 @@ function renderTradeDetailModal(t,td){
     <!-- IMÁGENES + NOTAS POR TEMPORALIDAD -->
     <div style="margin-bottom:16px">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px"><i class="fa fa-image"></i> Análisis por temporalidad</div>
-      ${['1D','12H','4H','1H','15m'].map(tf=>{
+      ${['1D','12H','4H','1H','15m','Resultado'].map(tf=>{
         const imgKey='img_'+tf;
         const noteKey='note_'+tf;
         const imgData=(td[imgKey]||'');
         const noteData=(td[noteKey]||'');
-        const tfLabel=tf==='1D'?'Diario':tf==='12H'?'12 horas':tf==='4H'?'4 horas':tf==='1H'?'1 hora':'15 min — entrada';
-        return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+        const isResult=tf==='Resultado';
+        const tfLabel=tf==='1D'?'Diario':tf==='12H'?'12 horas':tf==='4H'?'4 horas':tf==='1H'?'1 hora':tf==='15m'?'15 min — entrada':'Imagen del resultado final';
+        const tfColor=isResult?'var(--amber)':'var(--text2)';
+        const tfBg=isResult?'var(--amber2)':'var(--bg4)';
+        const tfBorder=isResult?'var(--amber)':'var(--border2)';
+        return `<div style="background:var(--bg3);border:1px solid ${isResult?'var(--amber)':'var(--border)'};border-radius:10px;padding:14px;margin-bottom:10px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-            <span style="font-size:12px;font-weight:700;background:var(--bg4);padding:3px 10px;border-radius:6px;color:var(--text2);border:1px solid var(--border2)">${tf}</span>
+            <span style="font-size:12px;font-weight:700;background:${tfBg};padding:3px 10px;border-radius:6px;color:${tfColor};border:1px solid ${tfBorder}">${tf}</span>
             <span style="font-size:12px;color:var(--text2)">${tfLabel}</span>
             ${imgData?`<span style="font-size:11px;color:var(--green);margin-left:auto"><i class="fa fa-check-circle"></i> Imagen guardada</span>`:''}
           </div>
-
           ${imgData
             ? `<div style="position:relative;margin-bottom:10px">
                 <img src="${imgData}" alt="${tf}" style="width:100%;max-height:240px;object-fit:contain;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${imgData}','_blank')">
                 <button onclick="removeTFImage('${id}','${tf}')" style="position:absolute;top:8px;right:8px;background:rgba(255,77,106,.92);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:5px 12px;font-size:11px;font-weight:600"><i class="fa fa-trash"></i> Borrar</button>
                </div>`
             : `<div style="border:2px dashed var(--border2);border-radius:8px;padding:16px;text-align:center;margin-bottom:10px;color:var(--text3);font-size:12px"><i class="fa fa-image" style="font-size:20px;margin-bottom:6px;display:block"></i>Sin imagen</div>`}
-
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
             <input type="file" id="tf-img-file-${id}-${tf}" accept="image/*" style="display:none" onchange="saveTFImageFile('${id}','${tf}',this)">
             <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="document.getElementById('tf-img-file-${id}-${tf}').click()"><i class="fa fa-upload"></i> Subir imagen</button>
             <input type="url" id="tf-img-url-${id}-${tf}" placeholder="o pega URL de TradingView..." style="flex:1;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px">
             <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="saveTFImageURL('${id}','${tf}')"><i class="fa fa-save"></i></button>
           </div>
-
           <div>
-            <div style="font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">📝 Nota del ${tf}</div>
+            <div style="font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">${isResult?'📊':'📝'} Nota ${isResult?'del resultado':'del '+tf}</div>
             <textarea
               id="tf-note-${id}-${tf}"
-              placeholder="¿Qué ves en ${tf}? Estructura, bias, zonas de interés..."
+              placeholder="${isResult?'Describe cómo cerró el trade, la salida, el manejo...':'¿Qué ves en '+tf+'? Estructura, bias, zonas de interés...'}"
               style="width:100%;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-family:var(--font-main);font-size:12px;resize:vertical;min-height:64px;line-height:1.6"
               oninput="saveTFNote('${id}','${tf}',this.value)"
             >${noteData}</textarea>
           </div>
         </div>`;
       }).join('')}
+    </div>
+
+    <!-- RESULTADO DEL TRADE -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:14px"><i class="fa fa-flag-checkered"></i> Resultado del trade</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div style="background:var(--bg4);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">P&L Bruto</div>
+          <div style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:${t.pnl>=0?'var(--green)':'var(--red)'}">$${Number(t.pnl).toFixed(2)}</div>
+        </div>
+        <div style="background:var(--bg4);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">P&L Neto</div>
+          <div style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:${pnlNeto>=0?'var(--green)':'var(--red)'}">$${pnlNeto.toFixed(2)}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">¿Qué salió bien?</div>
+        <textarea id="res-bien-${id}" placeholder="Ej: Esperé confirmación en 15m, respeté el SL..." style="width:100%;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-family:var(--font-main);font-size:12px;resize:vertical;min-height:56px;line-height:1.6">${td.res_bien||''}</textarea>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">¿Qué mejorar?</div>
+        <textarea id="res-mejorar-${id}" placeholder="Ej: Entré sin esperar el retroceso, apresuré la salida..." style="width:100%;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-family:var(--font-main);font-size:12px;resize:vertical;min-height:56px;line-height:1.6">${td.res_mejorar||''}</textarea>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Lección aprendida</div>
+        <textarea id="res-leccion-${id}" placeholder="Ej: No operar en consolidación, esperar liquidez..." style="width:100%;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-family:var(--font-main);font-size:12px;resize:vertical;min-height:56px;line-height:1.6">${td.res_leccion||''}</textarea>
+      </div>
+    </div>
+
+    <!-- BOTÓN GUARDAR -->
+    <div style="position:sticky;bottom:0;background:var(--bg2);padding:12px 0 4px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary" style="flex:1;padding:12px;font-size:14px" onclick="saveTradeDetail('${id}')">
+        <i class="fa fa-save"></i> Guardar análisis
+      </button>
+      <div id="save-status-${id}" style="font-size:12px;color:var(--text3)"></div>
     </div>
   `;
 }
@@ -1156,8 +1194,9 @@ function saveTFImageFile(tradeId,tf,input){
   if(!input.files[0])return;
   const reader=new FileReader();
   reader.onload=e=>{
-    if(!tradeDetails[tradeId])tradeDetails[tradeId]={steps:[],images:[],crt:{}};
+    if(!tradeDetails[tradeId])tradeDetails[tradeId]={};
     tradeDetails[tradeId]['img_'+tf]=e.target.result;
+    try{localStorage.setItem('tj_details_v1',JSON.stringify(tradeDetails));}catch(e2){}
     notify('Imagen '+tf+' guardada ✅');
     openTradeDetail(tradeId);
   };
@@ -1167,10 +1206,37 @@ function saveTFImageFile(tradeId,tf,input){
 function saveTFImageURL(tradeId,tf){
   const input=document.getElementById('tf-img-url-'+tradeId+'-'+tf);
   if(!input||!input.value.trim())return;
-  if(!tradeDetails[tradeId])tradeDetails[tradeId]={steps:[],images:[],crt:{}};
+  if(!tradeDetails[tradeId])tradeDetails[tradeId]={};
   tradeDetails[tradeId]['img_'+tf]=input.value.trim();
+  try{localStorage.setItem('tj_details_v1',JSON.stringify(tradeDetails));}catch(e){}
   notify('Imagen '+tf+' guardada ✅');
   openTradeDetail(tradeId);
+}
+
+function saveTradeDetail(id){
+  if(!tradeDetails[id])tradeDetails[id]={};
+  // Collect notes from all TF textareas
+  ['1D','12H','4H','1H','15m','Resultado'].forEach(tf=>{
+    const el=document.getElementById('tf-note-'+id+'-'+tf);
+    if(el)tradeDetails[id]['note_'+tf]=el.value;
+  });
+  // Collect resultado fields
+  const bien=document.getElementById('res-bien-'+id);
+  const mejorar=document.getElementById('res-mejorar-'+id);
+  const leccion=document.getElementById('res-leccion-'+id);
+  if(bien)tradeDetails[id].res_bien=bien.value;
+  if(mejorar)tradeDetails[id].res_mejorar=mejorar.value;
+  if(leccion)tradeDetails[id].res_leccion=leccion.value;
+  // Save to localStorage
+  try{localStorage.setItem('tj_details_v1',JSON.stringify(tradeDetails));}catch(e){}
+  // Show feedback
+  const st=document.getElementById('save-status-'+id);
+  if(st){st.textContent='✅ Guardado';st.style.color='var(--green)';setTimeout(()=>{if(st)st.textContent='';},2500);}
+  notify('Análisis guardado ✅');
+}
+
+function loadTradeDetails(){
+  try{const r=localStorage.getItem('tj_details_v1');if(r)tradeDetails=JSON.parse(r);}catch(e){}
 }
 
 function saveTFNote(tradeId,tf,val){
@@ -1181,6 +1247,7 @@ function saveTFNote(tradeId,tf,val){
 function removeTFImage(tradeId,tf){
   if(!tradeDetails[tradeId])return;
   tradeDetails[tradeId]['img_'+tf]='';
+  try{localStorage.setItem('tj_details_v1',JSON.stringify(tradeDetails));}catch(e){}
   notify('Imagen '+tf+' eliminada');
   openTradeDetail(tradeId);
 }
