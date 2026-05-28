@@ -674,6 +674,14 @@ tbody tr:last-child td{border-bottom:none}
 
 
 
+<!-- CRT SNAP DETAIL MODAL -->
+<div class="modal-overlay" id="crt-snap-modal">
+  <div class="modal" style="max-width:680px">
+    <button class="modal-close" onclick="closeModal('crt-snap-modal')"><i class="fa fa-xmark"></i></button>
+    <div id="crt-snap-modal-content"></div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
 <!-- Auth stub -->
@@ -1922,7 +1930,7 @@ function renderCRT(){
         :status==='partial'
         ?`<span style="font-size:10px;color:#b5880a;background:rgba(181,136,10,0.12);padding:2px 8px;border-radius:20px;border:1px solid #b5880a"><i class="fa fa-circle-half-stroke"></i> ${confirmed}/5 TFs</span>`
         :'';
-      return `<div style="background:${bgColor};border:2px solid ${borderColor};border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:all .2s">
+      return `<div style="background:${bgColor};border:2px solid ${borderColor};border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:all .2s;cursor:pointer" onclick="openSnapDetail(${i})">
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">
             <div style="font-size:13px;font-weight:700">${s.inst||'Sin instrumento'} ${s.dir||''} ${s.ses||''}</div>
@@ -1930,8 +1938,8 @@ function renderCRT(){
           </div>
           <div style="font-size:11px;color:var(--text3)">${s.date}${s.rr?' · R:R 1:'+s.rr:''}</div>
         </div>
-        <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="crtLoadSnap(${i})">Cargar</button>
-        <button class="btn-danger-sm" onclick="crtDeleteSnap(${i})"><i class="fa fa-trash"></i></button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="event.stopPropagation();crtLoadSnap(${i})">Cargar</button>
+        <button class="btn-danger-sm" onclick="event.stopPropagation();crtDeleteSnap(${i})"><i class="fa fa-trash"></i></button>
       </div>`;
     }).join('')}
   </div>`:'';
@@ -2056,6 +2064,124 @@ function crtDeleteSnap(i){
   crtSnaps.splice(i,1);
   saveCRT2();
   renderCRT();
+}
+
+function openSnapDetail(i){
+  const s=crtSnaps[i];
+  if(!s)return;
+  const tfs=['1D','12H','4H','1H','15m'];
+  const conds=['TS','RO','RR','RA'];
+  const condDesc={TS:'Turtle Soup',RO:'Rango Operativo',RR:'Rango Reiniciado',RA:'Rango Activado'};
+  const confirmed=tfs.filter(tf=>['TS','RO','RA'].some(c=>s[tf+'_'+c]==='yes')).length;
+  const isComplete=confirmed===5;
+  const borderColor=isComplete?'var(--green)':confirmed>0?'#b5880a':'var(--border)';
+  const statusBadge=isComplete
+    ?`<span style="font-size:11px;color:var(--green);background:var(--green2);padding:3px 10px;border-radius:20px;border:1px solid var(--green3)"><i class="fa fa-check-circle"></i> Completo</span>`
+    :`<span style="font-size:11px;color:#b5880a;background:rgba(181,136,10,0.12);padding:3px 10px;border-radius:20px;border:1px solid #b5880a"><i class="fa fa-circle-half-stroke"></i> ${confirmed}/5 TFs</span>`;
+
+  // TF cards read-only view
+  const tfsHTML=tfs.map(tf=>{
+    const confirmedConds=conds.filter(c=>s[tf+'_'+c]==='yes');
+    const hasRR=s[tf+'_RR']==='yes';
+    const hasConfirm=['TS','RO','RA'].some(c=>s[tf+'_'+c]==='yes');
+    const tfColor=hasRR?'var(--amber)':hasConfirm?'var(--green)':'var(--text3)';
+    const tfBg=hasRR?'var(--amber2)':hasConfirm?'var(--green2)':'var(--bg4)';
+    const tfBorder=hasRR?'var(--amber)':hasConfirm?'var(--green3)':'var(--border)';
+    const condsHTML=conds.map(c=>{
+      const val=s[tf+'_'+c]||'none';
+      const isRR=c==='RR';
+      const cls=val==='yes'?(isRR?'crt-trade-cond rr':'crt-trade-cond yes'):'crt-trade-cond';
+      const icon=val==='yes'?(isRR?'⚠':'✓'):'–';
+      return `<div class="${cls}" style="cursor:default">${icon} ${c}</div>`;
+    }).join('');
+    return `<div style="background:${tfBg};border:1px solid ${tfBorder};border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;background:var(--bg4);padding:2px 8px;border-radius:6px;color:${tfColor};border:1px solid ${tfBorder}">${tf}</span>
+        <span style="font-size:12px;color:var(--text2)">${tf==='1D'?'Diario':tf==='12H'?'12 horas':tf==='4H'?'4 horas':tf==='1H'?'1 hora':'15 min'}</span>
+        <span style="font-size:11px;color:${tfColor};margin-left:auto">${hasRR?'⚠ RR':hasConfirm?'✓ '+confirmedConds.filter(c=>c!=='RR').join('+'):'Sin confirmar'}</span>
+      </div>
+      <div class="crt-trade-conds">${condsHTML}</div>
+      ${s[tf+'_note']?`<div style="margin-top:8px;font-size:12px;color:var(--text2);background:var(--bg3);padding:8px 10px;border-radius:8px;line-height:1.6">${s[tf+'_note']}</div>`:''}
+    </div>`;
+  }).join('');
+
+  // Images per TF
+  const imgsHTML=['1D','12H','4H','1H','15m'].map(tf=>{
+    const imgKey='snap_img_'+i+'_'+tf;
+    const imgData=s['img_'+tf]||'';
+    return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;background:var(--bg4);padding:2px 8px;border-radius:6px;color:var(--text2);border:1px solid var(--border2)">${tf}</span>
+        ${imgData?`<span style="font-size:11px;color:var(--green);margin-left:auto"><i class="fa fa-check-circle"></i> Imagen</span>`:''}
+      </div>
+      ${imgData
+        ?`<div style="position:relative;margin-bottom:8px"><img src="${imgData}" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${imgData}','_blank')"><button onclick="removeSnapImg(${i},'${tf}')" style="position:absolute;top:6px;right:6px;background:rgba(255,77,106,.9);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:4px 10px;font-size:11px"><i class="fa fa-trash"></i></button></div>`
+        :`<div style="border:2px dashed var(--border2);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px;color:var(--text3);font-size:12px"><i class="fa fa-image" style="font-size:18px;margin-bottom:4px;display:block"></i>Sin imagen</div>`}
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="snap-img-file-${i}-${tf}" accept="image/*" style="display:none" onchange="saveSnapImg(${i},'${tf}',this)">
+        <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="document.getElementById('snap-img-file-${i}-${tf}').click()"><i class="fa fa-upload"></i> Subir</button>
+        <input type="url" id="snap-img-url-${i}-${tf}" placeholder="o pega URL..." style="flex:1;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px">
+        <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="saveSnapImgURL(${i},'${tf}')"><i class="fa fa-save"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('crt-snap-modal-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="flex:1">
+        <div style="font-size:18px;font-weight:700">${s.inst||'Sin instrumento'} ${s.dir||''}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">${s.ses||''} ${s.rr?'· R:R 1:'+s.rr:''} · ${s.date}</div>
+      </div>
+      ${statusBadge}
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-primary" style="flex:1" onclick="crtLoadSnap(${i});closeModal('crt-snap-modal')"><i class="fa fa-upload"></i> Cargar en analizador</button>
+      <button class="btn-danger-sm" style="padding:7px 14px" onclick="crtDeleteSnap(${i});closeModal('crt-snap-modal')"><i class="fa fa-trash"></i> Eliminar</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px"><i class="fa fa-crosshairs"></i> Confirmaciones CRT</div>
+        ${tfsHTML}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px"><i class="fa fa-image"></i> Imágenes por TF</div>
+        ${imgsHTML}
+      </div>
+    </div>
+  `;
+  openModal('crt-snap-modal');
+}
+
+function saveSnapImg(snapIdx,tf,input){
+  if(!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    if(!crtSnaps[snapIdx])return;
+    crtSnaps[snapIdx]['img_'+tf]=e.target.result;
+    saveCRT2();
+    notify('Imagen '+tf+' guardada ✅');
+    openSnapDetail(snapIdx);
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function saveSnapImgURL(snapIdx,tf){
+  const input=document.getElementById('snap-img-url-'+snapIdx+'-'+tf);
+  if(!input||!input.value.trim())return;
+  if(!crtSnaps[snapIdx])return;
+  crtSnaps[snapIdx]['img_'+tf]=input.value.trim();
+  saveCRT2();
+  notify('Imagen '+tf+' guardada ✅');
+  openSnapDetail(snapIdx);
+}
+
+function removeSnapImg(snapIdx,tf){
+  if(!crtSnaps[snapIdx])return;
+  crtSnaps[snapIdx]['img_'+tf]='';
+  saveCRT2();
+  openSnapDetail(snapIdx);
 }
 
 function saveCRT2(){
