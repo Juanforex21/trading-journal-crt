@@ -2066,20 +2066,18 @@ function crtDeleteSnap(i){
   renderCRT();
 }
 
-function openSnapDetail(i){
+function openSnapDetail(i, editMode=false){
   const s=crtSnaps[i];
   if(!s)return;
   const tfs=['1D','12H','4H','1H','15m'];
   const conds=['TS','RO','RR','RA'];
-  const condDesc={TS:'Turtle Soup',RO:'Rango Operativo',RR:'Rango Reiniciado',RA:'Rango Activado'};
   const confirmed=tfs.filter(tf=>['TS','RO','RA'].some(c=>s[tf+'_'+c]==='yes')).length;
   const isComplete=confirmed===5;
-  const borderColor=isComplete?'var(--green)':confirmed>0?'#b5880a':'var(--border)';
   const statusBadge=isComplete
     ?`<span style="font-size:11px;color:var(--green);background:var(--green2);padding:3px 10px;border-radius:20px;border:1px solid var(--green3)"><i class="fa fa-check-circle"></i> Completo</span>`
     :`<span style="font-size:11px;color:#b5880a;background:rgba(181,136,10,0.12);padding:3px 10px;border-radius:20px;border:1px solid #b5880a"><i class="fa fa-circle-half-stroke"></i> ${confirmed}/5 TFs</span>`;
 
-  // TF cards read-only view
+  // TF cards — read-only or editable
   const tfsHTML=tfs.map(tf=>{
     const confirmedConds=conds.filter(c=>s[tf+'_'+c]==='yes');
     const hasRR=s[tf+'_RR']==='yes';
@@ -2090,24 +2088,36 @@ function openSnapDetail(i){
     const condsHTML=conds.map(c=>{
       const val=s[tf+'_'+c]||'none';
       const isRR=c==='RR';
-      const cls=val==='yes'?(isRR?'crt-trade-cond rr':'crt-trade-cond yes'):'crt-trade-cond';
-      const icon=val==='yes'?(isRR?'⚠':'✓'):'–';
-      return `<div class="${cls}" style="cursor:default">${icon} ${c}</div>`;
+      if(editMode){
+        // Clickable in edit mode
+        let cls='crt-trade-cond';
+        if(val==='yes') cls+=isRR?' rr':' yes';
+        else if(val==='no') cls+=' no';
+        const icon=val==='yes'?(isRR?'⚠':'✓'):val==='no'?'✕':'–';
+        return `<div class="${cls}" onclick="toggleSnapCond(${i},'${tf}','${c}')">${icon} ${c}</div>`;
+      } else {
+        const cls=val==='yes'?(isRR?'crt-trade-cond rr':'crt-trade-cond yes'):'crt-trade-cond';
+        const icon=val==='yes'?(isRR?'⚠':'✓'):'–';
+        return `<div class="${cls}" style="cursor:default">${icon} ${c}</div>`;
+      }
     }).join('');
-    return `<div style="background:${tfBg};border:1px solid ${tfBorder};border-radius:10px;padding:12px;margin-bottom:8px">
+    const noteVal=s[tf+'_note']||'';
+    const noteSection=editMode
+      ?`<textarea id="sedit-note-${i}-${tf}" style="width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px;resize:vertical;min-height:56px;margin-top:8px;line-height:1.5" placeholder="¿Qué ves en ${tf}?">${noteVal}</textarea>`
+      :(noteVal?`<div style="margin-top:8px;font-size:12px;color:var(--text2);background:var(--bg3);padding:8px 10px;border-radius:8px;line-height:1.6">${noteVal}</div>`:'');
+    return `<div id="snap-tf-${i}-${tf}" style="background:${tfBg};border:1px solid ${tfBorder};border-radius:10px;padding:12px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <span style="font-size:12px;font-weight:700;background:var(--bg4);padding:2px 8px;border-radius:6px;color:${tfColor};border:1px solid ${tfBorder}">${tf}</span>
         <span style="font-size:12px;color:var(--text2)">${tf==='1D'?'Diario':tf==='12H'?'12 horas':tf==='4H'?'4 horas':tf==='1H'?'1 hora':'15 min'}</span>
         <span style="font-size:11px;color:${tfColor};margin-left:auto">${hasRR?'⚠ RR':hasConfirm?'✓ '+confirmedConds.filter(c=>c!=='RR').join('+'):'Sin confirmar'}</span>
       </div>
       <div class="crt-trade-conds">${condsHTML}</div>
-      ${s[tf+'_note']?`<div style="margin-top:8px;font-size:12px;color:var(--text2);background:var(--bg3);padding:8px 10px;border-radius:8px;line-height:1.6">${s[tf+'_note']}</div>`:''}
+      ${noteSection}
     </div>`;
   }).join('');
 
   // Images per TF
-  const imgsHTML=['1D','12H','4H','1H','15m'].map(tf=>{
-    const imgKey='snap_img_'+i+'_'+tf;
+  const imgsHTML=tfs.map(tf=>{
     const imgData=s['img_'+tf]||'';
     return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
@@ -2115,7 +2125,7 @@ function openSnapDetail(i){
         ${imgData?`<span style="font-size:11px;color:var(--green);margin-left:auto"><i class="fa fa-check-circle"></i> Imagen</span>`:''}
       </div>
       ${imgData
-        ?`<div style="position:relative;margin-bottom:8px"><img src="${imgData}" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${imgData}','_blank')"><button onclick="removeSnapImg(${i},'${tf}')" style="position:absolute;top:6px;right:6px;background:rgba(255,77,106,.9);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:4px 10px;font-size:11px"><i class="fa fa-trash"></i></button></div>`
+        ?`<div style="position:relative;margin-bottom:8px"><img src="${imgData}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${imgData}','_blank')"><button onclick="removeSnapImg(${i},'${tf}')" style="position:absolute;top:6px;right:6px;background:rgba(255,77,106,.9);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:4px 10px;font-size:11px"><i class="fa fa-trash"></i></button></div>`
         :`<div style="border:2px dashed var(--border2);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px;color:var(--text3);font-size:12px"><i class="fa fa-image" style="font-size:18px;margin-bottom:4px;display:block"></i>Sin imagen</div>`}
       <div style="display:flex;gap:8px;align-items:center">
         <input type="file" id="snap-img-file-${i}-${tf}" accept="image/*" style="display:none" onchange="saveSnapImg(${i},'${tf}',this)">
@@ -2126,8 +2136,17 @@ function openSnapDetail(i){
     </div>`;
   }).join('');
 
+  // Edit header fields
+  const headerSection=editMode?`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="fg"><label>Instrumento</label><input type="text" id="sedit-inst-${i}" value="${s.inst||''}" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-family:var(--font-main);font-size:13px;width:100%"></div>
+      <div class="fg"><label>Dirección</label><select id="sedit-dir-${i}" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-family:var(--font-main);font-size:13px;width:100%"><option value="Long" ${s.dir==='Long'?'selected':''}>Long</option><option value="Short" ${s.dir==='Short'?'selected':''}>Short</option></select></div>
+      <div class="fg"><label>Sesión</label><select id="sedit-ses-${i}" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-family:var(--font-main);font-size:13px;width:100%"><option value="Londres" ${s.ses==='Londres'?'selected':''}>Londres</option><option value="Nueva York" ${s.ses==='Nueva York'?'selected':''}>Nueva York</option><option value="Asia" ${s.ses==='Asia'?'selected':''}>Asia</option><option value="Londres+NY" ${s.ses==='Londres+NY'?'selected':''}>Londres+NY</option></select></div>
+      <div class="fg"><label>R:R</label><select id="sedit-rr-${i}" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-family:var(--font-main);font-size:13px;width:100%"><option value="">—</option><option value="1" ${s.rr==='1'?'selected':''}>1:1</option><option value="2" ${s.rr==='2'?'selected':''}>1:2</option><option value="3" ${s.rr==='3'?'selected':''}>1:3</option><option value="4" ${s.rr==='4'?'selected':''}>1:4+</option></select></div>
+    </div>`:'';
+
   document.getElementById('crt-snap-modal-content').innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
       <div style="flex:1">
         <div style="font-size:18px;font-weight:700">${s.inst||'Sin instrumento'} ${s.dir||''}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:3px">${s.ses||''} ${s.rr?'· R:R 1:'+s.rr:''} · ${s.date}</div>
@@ -2135,10 +2154,16 @@ function openSnapDetail(i){
       ${statusBadge}
     </div>
 
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-      <button class="btn btn-primary" style="flex:1" onclick="crtLoadSnap(${i});closeModal('crt-snap-modal')"><i class="fa fa-upload"></i> Cargar en analizador</button>
-      <button class="btn btn-ghost" style="padding:7px 14px" onclick="openSnapEdit(${i})"><i class="fa fa-pen"></i> Modificar</button>
-      <button class="btn-danger-sm" style="padding:7px 14px" onclick="crtDeleteSnap(${i});closeModal('crt-snap-modal')"><i class="fa fa-trash"></i> Eliminar</button>
+    ${headerSection}
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      ${editMode
+        ?`<button class="btn btn-primary" style="flex:1" onclick="saveSnapEdits(${i})"><i class="fa fa-save"></i> Guardar cambios</button>
+           <button class="btn btn-ghost" style="padding:7px 14px" onclick="openSnapDetail(${i},false)"><i class="fa fa-xmark"></i> Cancelar</button>`
+        :`<button class="btn btn-ghost" style="flex:1" onclick="openSnapDetail(${i},true)"><i class="fa fa-pen"></i> Modificar</button>
+           <button class="btn btn-ghost" style="padding:7px 14px" onclick="crtLoadSnap(${i});closeModal('crt-snap-modal')"><i class="fa fa-upload"></i> Cargar</button>`
+      }
+      <button class="btn-danger-sm" style="padding:7px 14px" onclick="crtDeleteSnap(${i});closeModal('crt-snap-modal')"><i class="fa fa-trash"></i></button>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
@@ -2153,6 +2178,40 @@ function openSnapDetail(i){
     </div>
   `;
   openModal('crt-snap-modal');
+}
+
+function toggleSnapCond(snapIdx,tf,cond){
+  if(!crtSnaps[snapIdx])return;
+  const key=tf+'_'+cond;
+  const cur=crtSnaps[snapIdx][key]||'none';
+  if(cond==='RR') crtSnaps[snapIdx][key]=cur==='none'?'yes':'none';
+  else crtSnaps[snapIdx][key]=cur==='none'?'yes':cur==='yes'?'no':'none';
+  // Re-render just that TF card
+  openSnapDetail(snapIdx, true);
+}
+
+function saveSnapEdits(i){
+  if(!crtSnaps[i])return;
+  const s=crtSnaps[i];
+  const tfs=['1D','12H','4H','1H','15m'];
+  // Save header fields
+  const instEl=document.getElementById('sedit-inst-'+i);
+  const dirEl=document.getElementById('sedit-dir-'+i);
+  const sesEl=document.getElementById('sedit-ses-'+i);
+  const rrEl=document.getElementById('sedit-rr-'+i);
+  if(instEl) s.inst=instEl.value;
+  if(dirEl) s.dir=dirEl.value;
+  if(sesEl) s.ses=sesEl.value;
+  if(rrEl) s.rr=rrEl.value;
+  // Save notes
+  tfs.forEach(tf=>{
+    const el=document.getElementById('sedit-note-'+i+'-'+tf);
+    if(el) s[tf+'_note']=el.value;
+  });
+  saveCRT2();
+  renderCRT();
+  notify('✅ Análisis actualizado');
+  openSnapDetail(i, false);
 }
 
 function saveSnapImg(snapIdx,tf,input){
@@ -2182,44 +2241,7 @@ function removeSnapImg(snapIdx,tf){
   if(!crtSnaps[snapIdx])return;
   crtSnaps[snapIdx]['img_'+tf]='';
   saveCRT2();
-  openSnapDetail(snapIdx);
-}
-
-function openSnapEdit(i){
-  // Load snap into analyzer
-  crtLoadSnap(i);
-  closeModal('crt-snap-modal');
-  // Mark which snap we're editing so save updates it
-  window._editingSnapIdx=i;
-  // Show edit mode indicator
-  notify('✏️ Editando análisis — modifica y guarda');
-  // Update save button to say "Guardar cambios"
-  const saveBtn=document.querySelector('[onclick="crtSaveSnap()"]');
-  if(saveBtn){
-    saveBtn.innerHTML='<i class="fa fa-save"></i> Guardar cambios';
-    saveBtn.style.background='var(--amber)';
-    saveBtn.style.color='#000';
-    saveBtn.setAttribute('onclick','crtSaveEdit()');
-  }
-}
-
-function crtSaveEdit(){
-  const i=window._editingSnapIdx;
-  if(i===undefined||i===null||!crtSnaps[i]){
-    // fallback: save as new
-    crtSaveSnap();
-    return;
-  }
-  // Preserve existing images
-  const existingImgs={};
-  const tfs=['1D','12H','4H','1H','15m'];
-  tfs.forEach(tf=>{if(crtSnaps[i]['img_'+tf])existingImgs['img_'+tf]=crtSnaps[i]['img_'+tf];});
-  // Update the snap with current state
-  crtSnaps[i]={...crtS,...existingImgs,date:crtSnaps[i].date+' (editado '+new Date().toLocaleTimeString('es')+')'};
-  window._editingSnapIdx=null;
-  saveCRT2();
-  renderCRT();
-  notify('✅ Análisis actualizado');
+  openSnapDetail(snapIdx, true);
 }
 
 function saveCRT2(){
