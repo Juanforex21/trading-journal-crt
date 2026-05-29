@@ -943,23 +943,25 @@ async function loadData(){
   // 2. IDs borrados — nunca vuelven a aparecer
   const deletedIds=new Set(getDeletedIds());
 
-  // 3. Carga trades base desde sample() filtrando borrados
+  // 3. Carga trades base desde sample() — estos son la fuente de verdad
   const sampleTrades=sample().filter(t=>!deletedIds.has(t.id));
+  const sampleIds=new Set(sampleTrades.map(t=>t.id));
   const baseTrades={};
   sampleTrades.forEach(t=>{baseTrades[t.id]=t;});
 
-  // 4. Merge con localStorage (también filtrando borrados)
+  // 4. Merge con localStorage — solo agrega trades NUEVOS (no del sample)
   try{
     const r=localStorage.getItem(SK);
     if(r){
       const local=JSON.parse(r);
-      local.filter(t=>!deletedIds.has(t.id)).forEach(t=>{baseTrades[t.id]=t;});
+      local.filter(t=>!deletedIds.has(t.id)&&!sampleIds.has(t.id))
+           .forEach(t=>{baseTrades[t.id]=t;});
     }
   }catch(e){}
 
   trades=Object.values(baseTrades);
 
-  // 4. Si hay token en memoria (ya logueado), sync con Supabase
+  // 5. Si hay token, sync con Supabase — solo agrega trades NUEVOS (no del sample)
   if(_sbToken&&_sbUser){
     scheduleTokenRefresh();
     showSyncStatus('syncing');
@@ -969,7 +971,9 @@ async function loadData(){
       });
       const cloudTrades=await r.json();
       if(Array.isArray(cloudTrades)&&cloudTrades.length>0){
-        cloudTrades.filter(t=>!deletedIds.has(t.id)).forEach(t=>{baseTrades[t.id]=t;});
+        // Cloud solo aporta trades que NO están en el sample (trades nuevos del usuario)
+        cloudTrades.filter(t=>!deletedIds.has(t.id)&&!sampleIds.has(t.id))
+                   .forEach(t=>{baseTrades[t.id]=t;});
         trades=Object.values(baseTrades);
       }
     }catch(e){}
