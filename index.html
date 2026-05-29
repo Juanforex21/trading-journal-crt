@@ -924,11 +924,16 @@ async function loadData(){
   const sess=getSbSession();
   if(sess&&Date.now()<(sess.exp||0)){
     _sbToken=sess.token;_sbUser=sess.email;
-    scheduleTokenRefresh(); // Auto-renew token
+    scheduleTokenRefresh();
     showSyncStatus('syncing');
     const pulled=await sbPull();
-    if(pulled){showSyncStatus('ok');}
-    else showSyncStatus('local');
+    // If cloud has less trades than local, push everything up
+    if(pulled){
+      await sbPush();
+      showSyncStatus('ok');
+    } else {
+      showSyncStatus('local');
+    }
   }
 
   // Load from localStorage (fallback or after pull)
@@ -1004,16 +1009,16 @@ async function doSyncLogin(){
   btn.textContent='Conectando...';btn.disabled=true;
   const res=await sbAuth(email,pass);
   if(res.ok){
-    // Save password in sessionStorage for silent token refresh
     sessionStorage.setItem('tj_pass',pass);
     err.style.display='none';
     showSyncStatus('syncing');
-    await sbPush();
+    // First pull from cloud, then push everything local to cloud
     await sbPull();
     renderAccountSelect();renderDashboard();
+    await sbPush(); // Push ALL trades including embedded ones
     showSyncStatus('ok');
     closeModal('sync-modal');
-    notify('✅ Conectado y sincronizado. Datos disponibles en todos tus dispositivos.');
+    notify('✅ Conectado — '+trades.length+' trades sincronizados a la nube.');
   } else {
     err.textContent=res.msg;err.style.display='block';
   }
