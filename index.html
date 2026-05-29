@@ -930,10 +930,8 @@ async function loadData(){
 
   trades=Object.values(baseTrades);
 
-  // 4. Si hay sesión de Supabase, merge con la nube
-  const sess=getSbSession();
-  if(sess&&Date.now()<(sess.exp||0)){
-    _sbToken=sess.token;_sbUser=sess.email;
+  // 4. Si hay token en memoria (ya logueado), sync con Supabase
+  if(_sbToken&&_sbUser){
     scheduleTokenRefresh();
     showSyncStatus('syncing');
     try{
@@ -947,7 +945,7 @@ async function loadData(){
       }
     }catch(e){}
 
-    // Pull CRT only
+    // Pull CRT
     try{
       const r3=await fetch(SB_URL+'/rest/v1/journal_meta?id=eq.'+encodeURIComponent(_sbUser+'_crt'),{
         headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
@@ -959,7 +957,6 @@ async function loadData(){
       }
     }catch(e){}
 
-    // 5. Push todo a Supabase (trades completos)
     localStorage.setItem(SK,JSON.stringify(trades));
     await sbPush();
     showSyncStatus('ok');
