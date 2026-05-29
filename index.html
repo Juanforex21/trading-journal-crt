@@ -839,13 +839,12 @@ async function sbPush(){
 async function sbPull(){
   if(!_sbToken||!_sbUser)return false;
   try{
-    // Pull trades from cloud
+    // Pull trades and MERGE with local (never replace)
     const r=await fetch(SB_URL+'/rest/v1/trades?user_email=eq.'+encodeURIComponent(_sbUser)+'&order=fecha.desc&limit=1000',{
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
     });
     const cloudTrades=await r.json();
     if(Array.isArray(cloudTrades)&&cloudTrades.length>0){
-      // MERGE: local + cloud por id, sin borrar ninguno
       const merged={};
       trades.forEach(t=>{merged[t.id]=t;});
       cloudTrades.forEach(t=>{merged[t.id]=t;});
@@ -853,20 +852,7 @@ async function sbPull(){
       localStorage.setItem(SK,JSON.stringify(trades));
     }
 
-    // Pull accounts
-    const r2=await fetch(SB_URL+'/rest/v1/journal_meta?id=eq.'+encodeURIComponent(_sbUser+'_accounts'),{
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
-    });
-    const metaAcc=await r2.json();
-    if(Array.isArray(metaAcc)&&metaAcc.length>0){
-      const cloudAccounts=JSON.parse(metaAcc[0].value);
-      if(Array.isArray(cloudAccounts)&&cloudAccounts.length>0){
-        accounts=cloudAccounts;
-        localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));
-      }
-    }
-
-    // Pull CRT
+    // Pull CRT only (never accounts)
     const r3=await fetch(SB_URL+'/rest/v1/journal_meta?id=eq.'+encodeURIComponent(_sbUser+'_crt'),{
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
     });
@@ -924,34 +910,71 @@ const DEFAULT_ACCOUNTS=[
 ];
 
 async function loadData(){
-  // Check saved Supabase session
+  // 1. SIEMPRE carga accounts desde DEFAULT_ACCOUNTS (código) — nunca desde la nube
+  accounts=DEFAULT_ACCOUNTS;
+  localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));
+
+  // 2. Carga trades base desde sample()
+  const sampleTrades=sample();
+  const baseTrades={};
+  sampleTrades.forEach(t=>{baseTrades[t.id]=t;});
+
+  // 3. Merge con localStorage
+  try{
+    const r=localStorage.getItem(SK);
+    if(r){
+      const local=JSON.parse(r);
+      local.forEach(t=>{baseTrades[t.id]=t;});
+    }
+  }catch(e){}
+
+  trades=Object.values(baseTrades);
+
+  // 4. Si hay sesión de Supabase, merge con la nube
   const sess=getSbSession();
   if(sess&&Date.now()<(sess.exp||0)){
     _sbToken=sess.token;_sbUser=sess.email;
     scheduleTokenRefresh();
     showSyncStatus('syncing');
-    const pulled=await sbPull();
-    // If cloud has less trades than local, push everything up
-    if(pulled){
-      await sbPush();
-      showSyncStatus('ok');
-    } else {
-      showSyncStatus('local');
-    }
+    try{
+      const r=await fetch(SB_URL+'/rest/v1/trades?user_email=eq.'+encodeURIComponent(_sbUser)+'&order=fecha.desc&limit=1000',{
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
+      });
+      const cloudTrades=await r.json();
+      if(Array.isArray(cloudTrades)&&cloudTrades.length>0){
+        cloudTrades.forEach(t=>{baseTrades[t.id]=t;});
+        trades=Object.values(baseTrades);
+      }
+    }catch(e){}
+
+    // Pull CRT only
+    try{
+      const r3=await fetch(SB_URL+'/rest/v1/journal_meta?id=eq.'+encodeURIComponent(_sbUser+'_crt'),{
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
+      });
+      const metaCrt=await r3.json();
+      if(Array.isArray(metaCrt)&&metaCrt.length>0){
+        const p=JSON.parse(metaCrt[0].value);
+        if(p.s||p.snaps){crtS=p.s||{};crtSnaps=p.snaps||[];}
+      }
+    }catch(e){}
+
+    // 5. Push todo a Supabase (trades completos)
+    localStorage.setItem(SK,JSON.stringify(trades));
+    await sbPush();
+    showSyncStatus('ok');
+  } else {
+    localStorage.setItem(SK,JSON.stringify(trades));
+    showSyncStatus('local');
   }
 
-  // Load from localStorage (fallback or after pull)
-  try{const r=localStorage.getItem(SK);if(r)trades=JSON.parse(r);}catch(e){trades=[];}
-  if(!trades.length)trades=sample();
-  try{const r=localStorage.getItem(SK_ACCOUNTS);if(r)accounts=JSON.parse(r);}catch(e){accounts=[];}
-  if(!accounts.length)accounts=DEFAULT_ACCOUNTS;
+  // currentAccount
   if(!accounts.find(a=>a.id===currentAccount))currentAccount=accounts[0].id;
 
   try{const r=localStorage.getItem(SK_CRT);if(r){const p=JSON.parse(r);crtState=p.state||{};crtSnapshots=p.snapshots||[];}}catch(e){}
   try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
 
   loadCRT2();loadTradeDetails();applyTheme();renderAccountSelect();renderDashboard();
-  if(!_sbToken)showSyncStatus('local');
 }
 
 function load(){loadData();}
@@ -1016,10 +1039,11 @@ async function doSyncLogin(){
     sessionStorage.setItem('tj_pass',pass);
     err.style.display='none';
     showSyncStatus('syncing');
-    // First pull from cloud, then push everything local to cloud
+    // Merge cloud trades with local (never replace)
     await sbPull();
+    // Push everything to cloud
+    await sbPush();
     renderAccountSelect();renderDashboard();
-    await sbPush(); // Push ALL trades including embedded ones
     showSyncStatus('ok');
     closeModal('sync-modal');
     notify('✅ Conectado — '+trades.length+' trades sincronizados a la nube.');
