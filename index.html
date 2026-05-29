@@ -780,6 +780,8 @@ async function refreshSbToken(){
           email:sess.email,
           exp:Date.now()+(7*24*60*60*1000) // 7 días
         }));
+        // Update sessionStorage too so F5 works
+        sessionStorage.setItem('tj_active_session',JSON.stringify({token:d.access_token,email:sess.email}));
         showSyncStatus('ok');
         return true;
       }
@@ -2042,6 +2044,7 @@ async function doLogin(){
     sessionStorage.setItem('tj_pass',pass);
     sessionStorage.setItem('tj_active_session',JSON.stringify({token:_sbToken,email}));
     _sbUser=email;
+    scheduleTokenRefresh();
     document.getElementById('login-screen').style.display='none';
     errEl.classList.remove('show');
     await loadData();
@@ -2545,8 +2548,21 @@ document.getElementById('f-hora').value=now2;
 try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
 applyTheme();
 
-// SIEMPRE mostrar login al cargar — sin excepciones
-document.getElementById('login-screen').style.display='flex';
+// Mantener sesión al hacer F5, pero pedir login al abrir nueva pestaña
+(function checkSession(){
+  try{
+    const s=JSON.parse(sessionStorage.getItem('tj_active_session'));
+    if(s&&s.token&&s.email){
+      _sbToken=s.token;
+      _sbUser=s.email;
+      scheduleTokenRefresh();
+      document.getElementById('login-screen').style.display='none';
+      load();
+      return;
+    }
+  }catch(e){}
+  document.getElementById('login-screen').style.display='flex';
+})();
 </script>
 </body>
 </html>
