@@ -588,23 +588,25 @@ tbody tr:last-child td{border-bottom:none}
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
         <div>
           <div style="font-size:16px;font-weight:700">Calendario Económico</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:3px">Eventos de alto impacto para la semana actual</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px">Eventos de la semana — Investing.com</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" id="fil-alto" onclick="filterEco('alto')" data-active="true">🔴 Alto</button>
-            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" id="fil-medio" onclick="filterEco('medio')" data-active="true">🟡 Medio</button>
-            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" id="fil-bajo" onclick="filterEco('bajo')" data-active="false">⚪ Bajo</button>
-          </div>
-          <button class="btn btn-primary" style="font-size:12px" onclick="loadEconomicCalendar()"><i class="fa fa-rotate"></i> Actualizar</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost" style="font-size:12px" onclick="loadEconomicCalendar()"><i class="fa fa-arrow-up-right-from-square"></i> Abrir en Investing.com</button>
         </div>
       </div>
-      <div id="ecocal-container">
-        <div style="text-align:center;padding:60px 20px;color:var(--text3)">
-          <i class="fa fa-globe" style="font-size:40px;margin-bottom:16px;display:block;opacity:.3"></i>
-          <div style="font-size:14px;margin-bottom:8px">Cargando eventos económicos...</div>
-          <div style="font-size:12px">Analizando el calendario de la semana con IA</div>
-        </div>
+      <div id="ecocal-container" style="border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+        <iframe id="eco-frame"
+          src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&importance=3%2C2&features=datepicker,timezone,filters&countries=5,25,22,37,12,35,7&calType=week&timeZone=56&lang=12&theme=dark"
+          width="100%"
+          height="600"
+          frameborder="0"
+          allowtransparency="true"
+          style="display:block;background:var(--bg2)">
+        </iframe>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">
+        Datos de <a href="https://es.investing.com/economic-calendar/" target="_blank" style="color:var(--green)">Investing.com</a> · 
+        🇺🇸 USD · 🇪🇺 EUR · 🇬🇧 GBP · 🇯🇵 JPY · 🇨🇦 CAD · 🇦🇺 AUD · 🇨🇭 CHF
       </div>
     </div>
 
@@ -2665,145 +2667,30 @@ function loadCRT2(){
 // ══════════════════════════════════════════
 // CALENDARIO ECONÓMICO
 // ══════════════════════════════════════════
-let _ecoData=[];
 let _ecoFilters={alto:true,medio:true,bajo:false};
-let _ecoLoaded=false;
 
 function filterEco(nivel){
   _ecoFilters[nivel]=!_ecoFilters[nivel];
   const btn=document.getElementById('fil-'+nivel);
   if(btn){btn.style.opacity=_ecoFilters[nivel]?'1':'0.4';}
-  renderEcoCalendar(_ecoData);
+  updateEcoFrame();
 }
 
-async function loadEconomicCalendar(){
-  if(_ecoLoaded){renderEcoCalendar(_ecoData);return;}
-  const container=document.getElementById('ecocal-container');
-  if(!container)return;
-  container.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--text3)">
-    <i class="fa fa-rotate fa-spin" style="font-size:32px;margin-bottom:16px;display:block;color:var(--green)"></i>
-    <div style="font-size:14px;margin-bottom:8px">Consultando eventos económicos con IA...</div>
-    <div style="font-size:12px;color:var(--text3)">Esto puede tomar unos segundos</div>
-  </div>`;
-
-  const today=new Date();
-  const dateStr=today.toLocaleDateString('es',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{
-          role:'user',
-          content:`Busca el calendario económico de esta semana (hoy es ${dateStr}). 
-          Necesito los eventos económicos más importantes de esta semana para traders de Forex y Futuros.
-          Devuelve SOLO un JSON válido con este formato exacto, sin texto adicional, sin markdown:
-          [
-            {
-              "fecha": "2026-05-28",
-              "hora": "14:30",
-              "pais": "USD",
-              "bandera": "🇺🇸",
-              "evento": "Non-Farm Payrolls",
-              "impacto": "alto",
-              "previo": "175K",
-              "estimado": "185K",
-              "actual": ""
-            }
-          ]
-          El campo impacto debe ser: "alto", "medio" o "bajo".
-          Incluye al menos 15-20 eventos de esta semana.
-          El campo actual déjalo vacío si el evento aún no ha ocurrido.`
-        }]
-      })
-    });
-
-    const data=await res.json();
-    const text=data.content.filter(c=>c.type==='text').map(c=>c.text).join('');
-    const clean=text.replace(/```json|```/g,'').trim();
-    const jsonMatch=clean.match(/\[[\s\S]*\]/);
-    if(jsonMatch){
-      _ecoData=JSON.parse(jsonMatch[0]);
-      _ecoLoaded=true;
-      renderEcoCalendar(_ecoData);
-    } else {
-      throw new Error('No JSON found');
-    }
-  }catch(e){
-    container.innerHTML=`<div style="text-align:center;padding:40px;color:var(--red)">
-      <i class="fa fa-triangle-exclamation" style="font-size:32px;margin-bottom:12px;display:block"></i>
-      <div style="font-size:13px">Error al cargar el calendario. <button class="btn btn-ghost" style="font-size:12px;margin-top:8px" onclick="_ecoLoaded=false;loadEconomicCalendar()">Reintentar</button></div>
-    </div>`;
+function updateEcoFrame(){
+  const importance=[];
+  if(_ecoFilters.alto)importance.push('3');
+  if(_ecoFilters.medio)importance.push('2');
+  if(_ecoFilters.bajo)importance.push('1');
+  const imp=importance.join('%2C');
+  const frame=document.getElementById('eco-frame');
+  if(frame){
+    const theme=isDark?'dark':'light';
+    frame.src=`https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&importance=${imp}&features=datepicker,timezone,filters&countries=5,25,22,37,12,35,7&calType=week&timeZone=56&lang=12&theme=${theme}`;
   }
 }
 
-function renderEcoCalendar(events){
-  const container=document.getElementById('ecocal-container');
-  if(!container)return;
-
-  const filtered=events.filter(e=>_ecoFilters[e.impacto]||false);
-
-  if(!filtered.length){
-    container.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No hay eventos con los filtros seleccionados.</div>';
-    return;
-  }
-
-  // Group by date
-  const byDate={};
-  filtered.forEach(e=>{
-    if(!byDate[e.fecha])byDate[e.fecha]=[];
-    byDate[e.fecha].push(e);
-  });
-
-  const impactColor={alto:'var(--red)',medio:'var(--amber)',bajo:'var(--text3)'};
-  const impactBg={alto:'var(--red2)',medio:'var(--amber2)',bajo:'var(--bg3)'};
-  const impactIcon={alto:'🔴',medio:'🟡',bajo:'⚪'};
-
-  const today=new Date().toISOString().slice(0,10);
-
-  const html=Object.entries(byDate).sort(([a],[b])=>a.localeCompare(b)).map(([fecha,evs])=>{
-    const d=new Date(fecha+'T12:00:00');
-    const isToday=fecha===today;
-    const dayLabel=d.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long'});
-    const eventsHtml=evs.sort((a,b)=>a.hora.localeCompare(b.hora)).map(e=>{
-      const hasActual=e.actual&&e.actual!=='';
-      return `<div style="display:grid;grid-template-columns:70px 50px 1fr auto auto auto;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
-        <div style="font-family:var(--font-mono);font-size:12px;color:var(--text2)">${e.hora}</div>
-        <div style="font-size:16px;text-align:center">${e.bandera} <span style="font-size:10px;color:var(--text3)">${e.pais}</span></div>
-        <div>
-          <div style="font-size:13px;font-weight:600">${e.evento}</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">${impactIcon[e.impacto]} ${e.impacto.charAt(0).toUpperCase()+e.impacto.slice(1)} impacto</div>
-        </div>
-        <div style="text-align:center;min-width:70px">
-          <div style="font-size:10px;color:var(--text3)">Previo</div>
-          <div style="font-size:12px;font-family:var(--font-mono)">${e.previo||'—'}</div>
-        </div>
-        <div style="text-align:center;min-width:70px">
-          <div style="font-size:10px;color:var(--text3)">Estimado</div>
-          <div style="font-size:12px;font-family:var(--font-mono)">${e.estimado||'—'}</div>
-        </div>
-        <div style="text-align:center;min-width:70px">
-          <div style="font-size:10px;color:var(--text3)">Actual</div>
-          <div style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:${hasActual?'var(--green)':'var(--text3)'}">${hasActual?e.actual:'—'}</div>
-        </div>
-      </div>`;
-    }).join('');
-
-    return `<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px;${isToday?'border-color:var(--green)':''}">
-      <div style="padding:12px 16px;background:${isToday?'var(--green2)':'var(--bg3)'};border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
-        <span style="font-size:13px;font-weight:700;color:${isToday?'var(--green)':'var(--text)'}">${dayLabel}</span>
-        ${isToday?'<span style="font-size:11px;background:var(--green);color:#000;padding:2px 8px;border-radius:20px;font-weight:600">HOY</span>':''}
-        <span style="margin-left:auto;font-size:11px;color:var(--text3)">${evs.length} evento${evs.length>1?'s':''}</span>
-      </div>
-      ${eventsHtml}
-    </div>`;
-  }).join('');
-
-  container.innerHTML=html||'<div style="text-align:center;padding:40px;color:var(--text3)">Sin eventos esta semana.</div>';
+function loadEconomicCalendar(){
+  window.open('https://es.investing.com/economic-calendar/','_blank');
 }
 
 // ══════════════════════════════════════════
