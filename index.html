@@ -437,6 +437,8 @@ tbody tr:last-child td{border-bottom:none}
         </select>
         <input type="month" id="fil-mes" onchange="renderHistorial()">
         <span class="filter-badge" id="fil-badge"></span>
+        <button class="btn btn-ghost" style="font-size:12px" onclick="selectAllTrades()"><i class="fa fa-check-square"></i> Seleccionar todo</button>
+        <button class="btn" style="font-size:12px;background:var(--red2);color:var(--red);border:1px solid var(--red3)" id="btn-del-sel" onclick="deleteSelected()" style="display:none"><i class="fa fa-trash"></i> Borrar seleccionados</button>
       </div>
       <div class="table-wrap"><div id="tabla-body"></div></div>
     </div>
@@ -1306,10 +1308,42 @@ function renderHistorial(){
   const s=calcStats(arr);
   document.getElementById('fil-badge').textContent=`${arr.length} trades · $${s.totalPnl.toFixed(0)} · ${s.winrate.toFixed(0)}% WR`;
   if(!arr.length){document.getElementById('tabla-body').innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">No hay operaciones con estos filtros</div>';return;}
-  // Get current account balance for % calculation
   const curAccObj=accounts.find(a=>a.id===currentAccount);
   const accBalance=curAccObj?Number(curAccObj.balance):10000;
-  document.getElementById('tabla-body').innerHTML=`<table><thead><tr><th>Fecha</th><th>Sesión</th><th>Activo</th><th>Dir</th><th>Setup</th><th>Entrada</th><th>Salida</th><th>SL</th><th>TP</th><th>Tamaño</th><th>P&L $</th><th>Comisión</th><th>P&L Neto</th><th>P&L %</th><th></th></tr></thead><tbody>${arr.map(t=>{const pnlNeto=Number(t.pnl)+(Number(t.comision)||0);const pct=accBalance>0?(pnlNeto/accBalance)*100:0;const pctColor=pct>0?'var(--green)':pct<0?'var(--red)':'var(--text2)';const netoClass=pnlNeto>0?'win':pnlNeto<0?'loss':'be';return`<tr><td style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${t.fecha} ${t.hora}</td><td style="font-size:11px;color:var(--text2)">${t.sesion||'—'}</td><td style="font-weight:600">${t.activo}</td><td><span class="badge badge-${t.dir.toLowerCase()}">${t.dir}</span></td><td style="font-size:11px;color:var(--text2)">${t.setup||'—'}</td><td style="font-family:var(--font-mono);font-size:11px">${Number(t.entrada).toFixed(4)}</td><td style="font-family:var(--font-mono);font-size:11px">${Number(t.salida).toFixed(4)}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${t.sl||'—'}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${t.tp||'—'}</td><td style="font-family:var(--font-mono);font-size:11px">${t.size}</td><td><span class="badge badge-${t.pnl>0?'win':t.pnl<0?'loss':'be'}">$${Number(t.pnl).toFixed(2)}</span></td><td style="font-family:var(--font-mono);font-size:11px;color:var(--red)">${t.comision?'$'+Number(t.comision).toFixed(2):'—'}</td><td><span class="badge badge-${netoClass}">$${pnlNeto.toFixed(2)}</span></td><td style="font-family:var(--font-mono);font-size:11px;color:${pctColor}">${pct>0?'+':''}${pct.toFixed(2)}%</td><td style="display:flex;gap:4px"><button style="background:var(--blue2);color:var(--blue);border:1px solid var(--blue2);padding:4px 8px;font-size:11px;border-radius:6px;cursor:pointer" onclick="openEditModal('${t.id}')"><i class="fa fa-pen"></i></button><button class="btn-danger-sm" onclick="delTrade('${t.id}')"><i class="fa fa-trash"></i></button></td></tr>`}).join('')}</tbody></table>`;
+  document.getElementById('tabla-body').innerHTML=`<table><thead><tr><th><input type="checkbox" id="chk-all" onchange="toggleAllChecks(this)" style="cursor:pointer;width:16px;height:16px"></th><th>Fecha</th><th>Sesión</th><th>Activo</th><th>Dir</th><th>Setup</th><th>Entrada</th><th>Salida</th><th>SL</th><th>TP</th><th>Tamaño</th><th>P&L $</th><th>Comisión</th><th>P&L Neto</th><th>P&L %</th><th></th></tr></thead><tbody>${arr.map(t=>{const pnlNeto=Number(t.pnl)+(Number(t.comision)||0);const pct=accBalance>0?(pnlNeto/accBalance)*100:0;const pctColor=pct>0?'var(--green)':pct<0?'var(--red)':'var(--text2)';const netoClass=pnlNeto>0?'win':pnlNeto<0?'loss':'be';return`<tr><td><input type="checkbox" class="trade-chk" data-id="${t.id}" style="cursor:pointer;width:16px;height:16px" onchange="updateDelBtn()"></td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${t.fecha} ${t.hora}</td><td style="font-size:11px;color:var(--text2)">${t.sesion||'—'}</td><td style="font-weight:600">${t.activo}</td><td><span class="badge badge-${t.dir.toLowerCase()}">${t.dir}</span></td><td style="font-size:11px;color:var(--text2)">${t.setup||'—'}</td><td style="font-family:var(--font-mono);font-size:11px">${Number(t.entrada).toFixed(4)}</td><td style="font-family:var(--font-mono);font-size:11px">${Number(t.salida).toFixed(4)}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${t.sl||'—'}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${t.tp||'—'}</td><td style="font-family:var(--font-mono);font-size:11px">${t.size}</td><td><span class="badge badge-${t.pnl>0?'win':t.pnl<0?'loss':'be'}">$${Number(t.pnl).toFixed(2)}</span></td><td style="font-family:var(--font-mono);font-size:11px;color:var(--red)">${t.comision?'$'+Number(t.comision).toFixed(2):'—'}</td><td><span class="badge badge-${netoClass}">$${pnlNeto.toFixed(2)}</span></td><td style="font-family:var(--font-mono);font-size:11px;color:${pctColor}">${pct>0?'+':''}${pct.toFixed(2)}%</td><td style="display:flex;gap:4px"><button style="background:var(--blue2);color:var(--blue);border:1px solid var(--blue2);padding:4px 8px;font-size:11px;border-radius:6px;cursor:pointer" onclick="openEditModal('${t.id}')"><i class="fa fa-pen"></i></button><button class="btn-danger-sm" onclick="delTrade('${t.id}')"><i class="fa fa-trash"></i></button></td></tr>`}).join('')}</tbody></table>`;
+}
+
+function toggleAllChecks(chk){
+  document.querySelectorAll('.trade-chk').forEach(c=>c.checked=chk.checked);
+  updateDelBtn();
+}
+
+function selectAllTrades(){
+  const all=document.querySelectorAll('.trade-chk');
+  const allChecked=[...all].every(c=>c.checked);
+  all.forEach(c=>c.checked=!allChecked);
+  const chkAll=document.getElementById('chk-all');
+  if(chkAll)chkAll.checked=!allChecked;
+  updateDelBtn();
+}
+
+function updateDelBtn(){
+  const selected=document.querySelectorAll('.trade-chk:checked').length;
+  const btn=document.getElementById('btn-del-sel');
+  if(btn){
+    btn.innerHTML=`<i class="fa fa-trash"></i> Borrar ${selected} seleccionados`;
+    btn.style.display=selected>0?'':'none';
+  }
+}
+
+function deleteSelected(){
+  const ids=[...document.querySelectorAll('.trade-chk:checked')].map(c=>c.dataset.id);
+  if(!ids.length)return;
+  if(!confirm(`¿Eliminar ${ids.length} trade${ids.length>1?'s':''}?`))return;
+  trades=trades.filter(t=>!ids.includes(t.id));
+  save();
+  renderHistorial();
+  notify(`${ids.length} trade${ids.length>1?'s':''} eliminado${ids.length>1?'s':''}`);
 }
 
 // ══════════════════════════════════════════
