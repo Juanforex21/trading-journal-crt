@@ -742,7 +742,7 @@ async function sbAuth(email,pass){
         token:d.access_token,
         refresh:d.refresh_token||null,
         email,
-        exp:Date.now()+3500000
+        exp:Date.now()+(7*24*60*60*1000) // 7 días
       }));
       // Schedule auto-refresh every 50 minutes
       scheduleTokenRefresh();
@@ -778,7 +778,7 @@ async function refreshSbToken(){
           token:d.access_token,
           refresh:d.refresh_token||sess.refresh,
           email:sess.email,
-          exp:Date.now()+3500000
+          exp:Date.now()+(7*24*60*60*1000) // 7 días
         }));
         showSyncStatus('ok');
         return true;
@@ -2040,25 +2040,17 @@ async function doLogin(){
   const btn=document.getElementById('login-btn');
   if(!email||!pass){errEl.textContent='Por favor ingresa tu correo y contraseña.';errEl.classList.add('show');return;}
   btn.textContent='Iniciando sesión...';btn.disabled=true;
-  try{
-    const r=await fetch('https://buoswluvrevchzotnrlh.supabase.co/auth/v1/token?grant_type=password',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':'sb_publishable_o405ZlCJZYMVIOn37TUGKA_mnwaBieN'},
-      body:JSON.stringify({email,password:pass})
-    });
-    const data=await r.json();
-    if(data.access_token){
-      _currentUser=email;_sbToken=data.access_token;
-      localStorage.setItem('tj_session',JSON.stringify({email,token:data.access_token,exp:Date.now()+3600000}));
-      document.getElementById('login-screen').style.display='none';
-      errEl.classList.remove('show');
-      await loadData();
-    } else {
-      const msg=data.error_description||data.msg||'Correo o contraseña incorrectos.';
-      errEl.textContent=msg;errEl.classList.add('show');
-    }
-  } catch(e){
-    errEl.textContent='Error de conexión. Verifica tu internet.';errEl.classList.add('show');
+  const res=await sbAuth(email,pass);
+  if(res.ok){
+    sessionStorage.setItem('tj_pass',pass);
+    sessionStorage.setItem('tj_active_session',JSON.stringify({token:_sbToken,email}));
+    _sbUser=email;
+    document.getElementById('login-screen').style.display='none';
+    errEl.classList.remove('show');
+    await loadData();
+  } else {
+    errEl.textContent=res.msg||'Correo o contraseña incorrectos.';
+    errEl.classList.add('show');
   }
   btn.innerHTML='<i class="fa fa-arrow-right-to-bracket"></i> Iniciar sesión';btn.disabled=false;
 }
@@ -2073,8 +2065,11 @@ async function doForgot(){
 
 function doLogout(){
   if(!confirm('¿Cerrar sesión?'))return;
+  sessionStorage.clear();
+  localStorage.removeItem('tj_sb_session');
   localStorage.removeItem('tj_session');
-  _currentUser=null;_sbToken=null;
+  _currentUser=null;_sbToken=null;_sbUser=null;
+  clearInterval(_refreshTimer);
   document.getElementById('login-screen').style.display='flex';
   notify('Sesión cerrada');
 }
@@ -2553,9 +2548,8 @@ document.getElementById('f-hora').value=now2;
 try{const t=localStorage.getItem(SK_THEME);if(t)isDark=(t==='dark');}catch(e){}
 applyTheme();
 
-// Hide login screen and load directly — data is embedded
-document.getElementById('login-screen').style.display='none';
-load();
+// SIEMPRE mostrar login al cargar — sin excepciones
+document.getElementById('login-screen').style.display='flex';
 </script>
 </body>
 </html>
