@@ -1762,6 +1762,7 @@ function deleteSelected(){
 }
 
 function openEditModal(id){
+  const t=trades.find(x=>x.id===id);if(!t)return;
   document.getElementById('edit-id').value=id;
   document.getElementById('edit-fecha').value=t.fecha||'';
   document.getElementById('edit-hora').value=t.hora||'00:00';
