@@ -921,17 +921,20 @@ async function loadData(){
   accounts=DEFAULT_ACCOUNTS;
   localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));
 
-  // 2. Carga trades base desde sample()
-  const sampleTrades=sample();
+  // 2. IDs borrados — nunca vuelven a aparecer
+  const deletedIds=new Set(getDeletedIds());
+
+  // 3. Carga trades base desde sample() filtrando borrados
+  const sampleTrades=sample().filter(t=>!deletedIds.has(t.id));
   const baseTrades={};
   sampleTrades.forEach(t=>{baseTrades[t.id]=t;});
 
-  // 3. Merge con localStorage
+  // 4. Merge con localStorage (también filtrando borrados)
   try{
     const r=localStorage.getItem(SK);
     if(r){
       const local=JSON.parse(r);
-      local.forEach(t=>{baseTrades[t.id]=t;});
+      local.filter(t=>!deletedIds.has(t.id)).forEach(t=>{baseTrades[t.id]=t;});
     }
   }catch(e){}
 
@@ -947,7 +950,7 @@ async function loadData(){
       });
       const cloudTrades=await r.json();
       if(Array.isArray(cloudTrades)&&cloudTrades.length>0){
-        cloudTrades.forEach(t=>{baseTrades[t.id]=t;});
+        cloudTrades.filter(t=>!deletedIds.has(t.id)).forEach(t=>{baseTrades[t.id]=t;});
         trades=Object.values(baseTrades);
       }
     }catch(e){}
@@ -1693,9 +1696,45 @@ function guardarTrade(){
   trades.push(t);save(t);clearForm();notify('Operación guardada');
 }
 function clearForm(){['f-activo','f-setup','f-entrada','f-salida','f-sl','f-tp','f-size','f-pnl','f-pct','f-notas','f-screenshot','f-comision'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});}
-function delTrade(id){if(!confirm('¿Eliminar esta operación?'))return;trades=trades.filter(t=>t.id!==id);save();renderHistorial();}
+function getDeletedIds(){
+  try{return JSON.parse(localStorage.getItem('tj_deleted_ids')||'[]');}catch(e){return[];}
+}
+function addDeletedId(id){
+  const ids=getDeletedIds();
+  if(!ids.includes(id))ids.push(id);
+  localStorage.setItem('tj_deleted_ids',JSON.stringify(ids));
+}
 
-function openEditModal(id){
+async function sbDeleteTrade(id){
+  if(!_sbToken||!_sbUser)return;
+  try{
+    await fetch(SB_URL+'/rest/v1/trades?id=eq.'+id+'&user_email=eq.'+encodeURIComponent(_sbUser),{
+      method:'DELETE',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
+    });
+  }catch(e){}
+}
+
+function delTrade(id){
+  if(!confirm('¿Eliminar esta operación?'))return;
+  trades=trades.filter(t=>t.id!==id);
+  addDeletedId(id);
+  localStorage.setItem(SK,JSON.stringify(trades));
+  sbDeleteTrade(id);
+  renderHistorial();
+  notify('Trade eliminado');
+}
+
+function deleteSelected(){
+  const ids=[...document.querySelectorAll('.trade-chk:checked')].map(c=>c.dataset.id);
+  if(!ids.length)return;
+  if(!confirm(`¿Eliminar ${ids.length} trade${ids.length>1?'s':''}?`))return;
+  trades=trades.filter(t=>!ids.includes(t.id));
+  ids.forEach(id=>{addDeletedId(id);sbDeleteTrade(id);});
+  localStorage.setItem(SK,JSON.stringify(trades));
+  renderHistorial();
+  notify(`${ids.length} trade${ids.length>1?'s':''} eliminado${ids.length>1?'s':''}`);
+}
   const t=trades.find(x=>x.id===id);if(!t)return;
   document.getElementById('edit-id').value=id;
   document.getElementById('edit-fecha').value=t.fecha||'';
