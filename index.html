@@ -585,28 +585,19 @@ tbody tr:last-child td{border-bottom:none}
 
     <!-- ─── CALENDARIO ECONÓMICO ─── -->
     <div id="view-ecocal" class="view">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-        <div>
-          <div style="font-size:16px;font-weight:700">Calendario Económico</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:3px">Eventos de la semana — Investing.com</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn btn-ghost" style="font-size:12px" onclick="loadEconomicCalendar()"><i class="fa fa-arrow-up-right-from-square"></i> Abrir en Investing.com</button>
-        </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700">Calendario Económico</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px">Eventos macroeconómicos en tiempo real — TradingView</div>
       </div>
-      <div id="ecocal-container" style="border-radius:12px;overflow:hidden;border:1px solid var(--border)">
-        <iframe id="eco-frame"
-          src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&importance=3%2C2&features=datepicker,timezone,filters&countries=5,25,22,37,12,35,7&calType=week&timeZone=56&lang=12&theme=dark"
-          width="100%"
-          height="600"
-          frameborder="0"
-          allowtransparency="true"
-          style="display:block;background:var(--bg2)">
-        </iframe>
-      </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">
-        Datos de <a href="https://es.investing.com/economic-calendar/" target="_blank" style="color:var(--green)">Investing.com</a> · 
-        🇺🇸 USD · 🇪🇺 EUR · 🇬🇧 GBP · 🇯🇵 JPY · 🇨🇦 CAD · 🇦🇺 AUD · 🇨🇭 CHF
+      <div style="border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+        <div class="tradingview-widget-container" style="height:600px">
+          <iframe
+            src="https://www.tradingview.com/embed-widget/events/?locale=es#%7B%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Afalse%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22600%22%2C%22importanceFilter%22%3A%22-1%2C0%2C1%22%2C%22countryFilter%22%3A%22ar%2Cau%2Cbr%2Cca%2Ccn%2Cfr%2Cde%2Cin%2Cid%2Cit%2Cjp%2Ckr%2Cmx%2Cru%2Csa%2Cza%2Ctr%2Cgb%2Cus%2Ceu%22%7D"
+            id="eco-tradingview-frame"
+            style="width:100%;height:600px;border:none"
+            allowtransparency="true">
+          </iframe>
+        </div>
       </div>
     </div>
 
@@ -2690,7 +2681,11 @@ function updateEcoFrame(){
 }
 
 function loadEconomicCalendar(){
-  window.open('https://es.investing.com/economic-calendar/','_blank');
+  const frame=document.getElementById('eco-tradingview-frame');
+  if(frame){
+    const theme=isDark?'dark':'light';
+    frame.src=`https://www.tradingview.com/embed-widget/events/?locale=es#%7B%22colorTheme%22%3A%22${theme}%22%2C%22isTransparent%22%3Afalse%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22600%22%2C%22importanceFilter%22%3A%22-1%2C0%2C1%22%2C%22countryFilter%22%3A%22ar%2Cau%2Cbr%2Cca%2Ccn%2Cfr%2Cde%2Cin%2Cid%2Cit%2Cjp%2Ckr%2Cmx%2Cru%2Csa%2Cza%2Ctr%2Cgb%2Cus%2Ceu%22%7D`;
+  }
 }
 
 // ══════════════════════════════════════════
