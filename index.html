@@ -839,17 +839,21 @@ async function sbPush(){
 async function sbPull(){
   if(!_sbToken||!_sbUser)return false;
   try{
-    // Pull trades
-    const r=await fetch(SB_URL+'/rest/v1/trades?user_email=eq.'+encodeURIComponent(_sbUser)+'&order=fecha.desc',{
+    // Pull trades from cloud
+    const r=await fetch(SB_URL+'/rest/v1/trades?user_email=eq.'+encodeURIComponent(_sbUser)+'&order=fecha.desc&limit=1000',{
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
     });
     const cloudTrades=await r.json();
     if(Array.isArray(cloudTrades)&&cloudTrades.length>0){
-      trades=cloudTrades;
+      // MERGE: local + cloud por id, sin borrar ninguno
+      const merged={};
+      trades.forEach(t=>{merged[t.id]=t;});
+      cloudTrades.forEach(t=>{merged[t.id]=t;});
+      trades=Object.values(merged);
       localStorage.setItem(SK,JSON.stringify(trades));
     }
 
-    // Pull accounts — only overwrite if cloud has data
+    // Pull accounts
     const r2=await fetch(SB_URL+'/rest/v1/journal_meta?id=eq.'+encodeURIComponent(_sbUser+'_accounts'),{
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
     });
@@ -862,7 +866,7 @@ async function sbPull(){
       }
     }
 
-    // Pull CRT — only overwrite if cloud has data
+    // Pull CRT
     const r3=await fetch(SB_URL+'/rest/v1/journal_meta?id=eq.'+encodeURIComponent(_sbUser+'_crt'),{
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+_sbToken}
     });
