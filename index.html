@@ -1735,7 +1735,8 @@ function deleteSelected(){
   renderHistorial();
   notify(`${ids.length} trade${ids.length>1?'s':''} eliminado${ids.length>1?'s':''}`);
 }
-  const t=trades.find(x=>x.id===id);if(!t)return;
+
+function openEditModal(id){
   document.getElementById('edit-id').value=id;
   document.getElementById('edit-fecha').value=t.fecha||'';
   document.getElementById('edit-hora').value=t.hora||'00:00';
