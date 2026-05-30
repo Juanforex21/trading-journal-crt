@@ -696,6 +696,12 @@ tbody tr:last-child td{border-bottom:none}
 
 
 
+<!-- LIGHTBOX -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out" onclick="closeLightbox()">
+  <img id="lightbox-img" style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.8)">
+  <button onclick="closeLightbox()" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+</div>
+
 <!-- SYNC MODAL -->
 <div class="modal-overlay" id="sync-modal">
   <div class="modal" style="max-width:440px">
@@ -1486,13 +1492,14 @@ function renderTradeDetailModal(t,td){
           </div>
           ${imgData
             ? `<div style="position:relative;margin-bottom:10px">
-                <img src="${imgData}" alt="${tf}" style="width:100%;max-height:240px;object-fit:contain;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${imgData}','_blank')">
+                <img src="${imgData}" alt="${tf}" style="width:100%;max-height:240px;object-fit:contain;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openLightbox('${imgData}')">
                 <button onclick="removeTFImage('${id}','${tf}')" style="position:absolute;top:8px;right:8px;background:rgba(255,77,106,.92);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:5px 12px;font-size:11px;font-weight:600"><i class="fa fa-trash"></i> Borrar</button>
                </div>`
             : `<div style="border:2px dashed var(--border2);border-radius:8px;padding:16px;text-align:center;margin-bottom:10px;color:var(--text3);font-size:12px"><i class="fa fa-image" style="font-size:20px;margin-bottom:6px;display:block"></i>Sin imagen</div>`}
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
             <input type="file" id="tf-img-file-${id}-${tf}" accept="image/*" style="display:none" onchange="saveTFImageFile('${id}','${tf}',this)">
-            <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="document.getElementById('tf-img-file-${id}-${tf}').click()"><i class="fa fa-upload"></i> Subir imagen</button>
+            <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="document.getElementById('tf-img-file-${id}-${tf}').click()"><i class="fa fa-upload"></i> Subir</button>
+            <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="setPasteTarget('${id}','${tf}');notify('📋 Listo — pega con Ctrl+V')"><i class="fa fa-paste"></i> Pegar</button>
             <input type="url" id="tf-img-url-${id}-${tf}" placeholder="o pega URL de TradingView..." style="flex:1;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px">
             <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="saveTFImageURL('${id}','${tf}')"><i class="fa fa-save"></i></button>
           </div>
@@ -2584,11 +2591,12 @@ function openSnapDetail(i, editMode=false){
         ${imgData?`<span style="font-size:11px;color:var(--green);margin-left:auto"><i class="fa fa-check-circle"></i> Imagen</span>`:''}
       </div>
       ${imgData
-        ?`<div style="position:relative;margin-bottom:8px"><img src="${imgData}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${imgData}','_blank')"><button onclick="removeSnapImg(${i},'${tf}')" style="position:absolute;top:6px;right:6px;background:rgba(255,77,106,.9);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:4px 10px;font-size:11px"><i class="fa fa-trash"></i></button></div>`
+        ?`<div style="position:relative;margin-bottom:8px"><img src="${imgData}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="openLightbox('${imgData}')"><button onclick="removeSnapImg(${i},'${tf}')" style="position:absolute;top:6px;right:6px;background:rgba(255,77,106,.9);border:none;border-radius:6px;color:#fff;cursor:pointer;padding:4px 10px;font-size:11px"><i class="fa fa-trash"></i></button></div>`
         :`<div style="border:2px dashed var(--border2);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px;color:var(--text3);font-size:12px"><i class="fa fa-image" style="font-size:18px;margin-bottom:4px;display:block"></i>Sin imagen</div>`}
       <div style="display:flex;gap:8px;align-items:center">
         <input type="file" id="snap-img-file-${i}-${tf}" accept="image/*" style="display:none" onchange="saveSnapImg(${i},'${tf}',this)">
         <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="document.getElementById('snap-img-file-${i}-${tf}').click()"><i class="fa fa-upload"></i> Subir</button>
+        <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="setPasteTargetSnap(${i},'${tf}');notify('📋 Listo — pega con Ctrl+V')"><i class="fa fa-paste"></i> Pegar</button>
         <input type="url" id="snap-img-url-${i}-${tf}" placeholder="o pega URL..." style="flex:1;background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-family:var(--font-main);font-size:12px">
         <button class="btn btn-ghost" style="font-size:12px;flex-shrink:0" onclick="saveSnapImgURL(${i},'${tf}')"><i class="fa fa-save"></i></button>
       </div>
@@ -2744,6 +2752,66 @@ function loadEconomicCalendar(){
     frame.src=`https://www.tradingview.com/embed-widget/events/?locale=es#%7B%22colorTheme%22%3A%22${theme}%22%2C%22isTransparent%22%3Afalse%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22600%22%2C%22importanceFilter%22%3A%22-1%2C0%2C1%22%2C%22countryFilter%22%3A%22ar%2Cau%2Cbr%2Cca%2Ccn%2Cfr%2Cde%2Cin%2Cid%2Cit%2Cjp%2Ckr%2Cmx%2Cru%2Csa%2Cza%2Ctr%2Cgb%2Cus%2Ceu%22%7D`;
   }
 }
+
+// ══════════════════════════════════════════
+// LIGHTBOX
+// ══════════════════════════════════════════
+function openLightbox(src){
+  const lb=document.getElementById('lightbox');
+  const img=document.getElementById('lightbox-img');
+  img.src=src;
+  lb.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeLightbox(){
+  document.getElementById('lightbox').style.display='none';
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+
+// ══════════════════════════════════════════
+// PASTE IMAGE (Ctrl+V)
+// ══════════════════════════════════════════
+let _pasteTarget=null; // {tradeId, tf} or {snapIdx, tf}
+
+function setPasteTarget(tradeId, tf){
+  _pasteTarget={type:'trade', tradeId, tf};
+}
+function setPasteTargetSnap(snapIdx, tf){
+  _pasteTarget={type:'snap', snapIdx, tf};
+}
+
+document.addEventListener('paste', e=>{
+  if(!_pasteTarget)return;
+  const items=e.clipboardData?.items;
+  if(!items)return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      const file=item.getAsFile();
+      if(!file)continue;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        const data=ev.target.result;
+        if(_pasteTarget.type==='trade'){
+          if(!tradeDetails[_pasteTarget.tradeId])tradeDetails[_pasteTarget.tradeId]={};
+          tradeDetails[_pasteTarget.tradeId]['img_'+_pasteTarget.tf]=data;
+          try{localStorage.setItem('tj_details_v1',JSON.stringify(tradeDetails));}catch(e2){}
+          notify('📋 Imagen pegada en '+_pasteTarget.tf+' ✅');
+          openTradeDetail(_pasteTarget.tradeId);
+        } else if(_pasteTarget.type==='snap'){
+          if(!crtSnaps[_pasteTarget.snapIdx])return;
+          crtSnaps[_pasteTarget.snapIdx]['img_'+_pasteTarget.tf]=data;
+          saveCRT2();
+          notify('📋 Imagen pegada en '+_pasteTarget.tf+' ✅');
+          openSnapDetail(_pasteTarget.snapIdx);
+        }
+        _pasteTarget=null;
+      };
+      reader.readAsDataURL(file);
+      break;
+    }
+  }
+});
 
 // ══════════════════════════════════════════
 // INIT
