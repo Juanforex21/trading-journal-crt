@@ -980,25 +980,35 @@ async function loadData(){
   // 2. IDs borrados — nunca vuelven a aparecer
   const deletedIds=new Set(getDeletedIds());
 
-  // 3. Carga trades base desde sample() — estos son la fuente de verdad
+  // 3. Carga trades base desde sample()
   const sampleTrades=sample().filter(t=>!deletedIds.has(t.id));
   const sampleIds=new Set(sampleTrades.map(t=>t.id));
   const baseTrades={};
-  sampleTrades.forEach(t=>{baseTrades[t.id]=t;});
+  sampleTrades.forEach(t=>{baseTrades[t.id]={...t};});
 
-  // 4. Merge con localStorage — solo agrega trades NUEVOS (no del sample)
+  // Campos que el usuario puede editar — se preservan sobre el sample
+  const EDITABLE_FIELDS=['setup','notas','screenshot','sesion','dir','entrada','salida','sl','tp','size','pnl','comision','pct','hora'];
+
+  // 4. Merge con localStorage
   try{
     const r=localStorage.getItem(SK);
     if(r){
       const local=JSON.parse(r);
-      local.filter(t=>!deletedIds.has(t.id)&&!sampleIds.has(t.id))
-           .forEach(t=>{baseTrades[t.id]=t;});
+      local.filter(t=>!deletedIds.has(t.id)).forEach(t=>{
+        if(sampleIds.has(t.id)){
+          // Trade del sample — solo actualiza campos editados por usuario
+          EDITABLE_FIELDS.forEach(f=>{if(t[f]!==undefined&&t[f]!==null)baseTrades[t.id][f]=t[f];});
+        } else {
+          // Trade nuevo — agrega completo
+          baseTrades[t.id]=t;
+        }
+      });
     }
   }catch(e){}
 
   trades=Object.values(baseTrades);
 
-  // 5. Si hay token, sync con Supabase — solo agrega trades NUEVOS (no del sample)
+  // 5. Si hay token, sync con Supabase
   if(_sbToken&&_sbUser){
     scheduleTokenRefresh();
     showSyncStatus('syncing');
@@ -1008,9 +1018,14 @@ async function loadData(){
       });
       const cloudTrades=await r.json();
       if(Array.isArray(cloudTrades)&&cloudTrades.length>0){
-        // Cloud solo aporta trades que NO están en el sample (trades nuevos del usuario)
-        cloudTrades.filter(t=>!deletedIds.has(t.id)&&!sampleIds.has(t.id))
-                   .forEach(t=>{baseTrades[t.id]=t;});
+        cloudTrades.filter(t=>!deletedIds.has(t.id)).forEach(t=>{
+          if(sampleIds.has(t.id)){
+            // Trade del sample — solo actualiza campos editables desde cloud
+            EDITABLE_FIELDS.forEach(f=>{if(t[f]!==undefined&&t[f]!==null)baseTrades[t.id][f]=t[f];});
+          } else {
+            baseTrades[t.id]=t;
+          }
+        });
         trades=Object.values(baseTrades);
       }
     }catch(e){}
