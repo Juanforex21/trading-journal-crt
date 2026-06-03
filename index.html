@@ -2804,114 +2804,81 @@ function loadCRT2(){
 // ══════════════════════════════════════════
 // PSICOLOGÍA DEL TRADING
 // ══════════════════════════════════════════
-async function loadPsicologia(){
+const PSICO_MSGS=[
+  {tema:"Disciplina",emoji:"🎯",titulo:"La disciplina supera al talento",mensaje:"La diferencia entre un trader rentable y uno que pierde no está en cuántos análisis hace, sino en qué tan disciplinado es al ejecutarlos.\n\nCada vez que respetas tu plan — aunque el mercado haga algo distinto a lo que esperabas — estás construyendo el músculo más importante del trading: la consistencia.\n\nHoy no te midan por cuánto ganaste, sino por cuántas veces seguiste tu proceso.",tip:"Antes de cada trade pregúntate: ¿estoy siguiendo mi plan o estoy improvisando? Si es lo segundo, no entres.",cita:"La disciplina es el puente entre las metas y los logros.",autor_cita:"Jim Rohn"},
+  {tema:"Paciencia",emoji:"⏳",titulo:"El mercado siempre da oportunidades",mensaje:"La mayoría de las pérdidas en trading no vienen de malos análisis — vienen de forzar trades cuando no hay setup. La impaciencia es el enemigo silencioso del trader.\n\nEl mercado abre todos los días. Siempre habrá otro setup, otra oportunidad, otra semana. Lo que no puedes recuperar fácilmente es el capital que pierdes por entrar sin convicción.\n\nHoy practica el arte de no hacer nada cuando no hay nada que hacer.",tip:"Si no ves un setup claro en los primeros 30 minutos de sesión, considera no operar ese día.",cita:"El dinero se hace sentado, no operando.",autor_cita:"Jesse Livermore"},
+  {tema:"Gestión emocional",emoji:"🧘",titulo:"Controla tus emociones antes de controlar el mercado",mensaje:"El trading es 20% análisis y 80% gestión mental. Puedes tener el mejor sistema del mundo, pero si tus emociones mandan en el momento de ejecutar, el sistema no sirve.\n\nCuando sientas miedo antes de una entrada, pregúntate: ¿es miedo fundado en el análisis o es solo el ruido de mi mente? Cuando sientas euforia después de un win, eso es precisamente cuando más cuidado debes tener.\n\nLas emociones son información, no órdenes.",tip:"Después de cada trade, escribe una palabra que describa cómo te sentiste. Esa práctica revela tus patrones emocionales.",cita:"El mayor enemigo del inversor es él mismo.",autor_cita:"Benjamin Graham"},
+  {tema:"Gestión de riesgo",emoji:"🛡️",titulo:"Protege tu capital como si fuera oxígeno",mensaje:"Un trader que pierde el 50% de su cuenta necesita ganar el 100% para recuperarse. La matemática del drawdown es brutal — por eso los mejores traders del mundo obsesionan con no perder, no con ganar.\n\nRiesgar poco por trade no es cobardía, es inteligencia. Los trades grandes que salen mal son los que destruyen cuentas y, peor aún, la confianza.\n\nHoy recuerda: sobrevivir es ganar. El que sigue en el juego mañana tiene chances de ganar.",tip:"Nunca arriesgues más del 1-2% de tu cuenta en un solo trade, sin importar qué tan bueno se vea el setup.",cita:"Primero aprende a no perder dinero. Ganar dinero viene después.",autor_cita:"Paul Tudor Jones"},
+  {tema:"Aceptación de pérdidas",emoji:"💪",titulo:"Las pérdidas son el costo de hacer negocios",mensaje:"Ningún trader gana el 100% de sus trades. Ni los mejores del mundo. Las pérdidas son parte inevitable del proceso — la pregunta no es si vas a perder, sino cómo vas a manejar esas pérdidas.\n\nUna pérdida bien ejecutada — respetando el SL, siguiendo el plan — es un buen trade. Un win que entró por FOMO o sin setup es un mal trade aunque haya ganado. El proceso importa más que el resultado de cada trade individual.\n\nHoy acepta que perder forma parte de ganar.",tip:"Después de una pérdida, espera al menos 15 minutos antes de abrir otro trade. La venganza en el mercado siempre sale cara.",cita:"Los mercados pueden permanecer irracionales más tiempo del que tú puedes permanecer solvente.",autor_cita:"John Maynard Keynes"},
+  {tema:"Consistencia",emoji:"📈",titulo:"Los pequeños wins acumulados ganan guerras",mensaje:"Los traders que buscan el trade perfecto que los haga ricos de un golpe raramente lo encuentran. Los que construyen riqueza en el trading lo hacen ganando consistentemente — no espectacularmente.\n\nUn 1% diario sostenido transforma cualquier cuenta. La consistencia, aunque parezca aburrida, es el único camino probado hacia la rentabilidad a largo plazo.\n\nNo necesitas un trade del año. Necesitas un proceso del año.",tip:"Define cuánto es 'suficiente' para el día. Cuando lo alcances, cierra la plataforma. La avaricia es el fin de la consistencia.",cita:"Los mercados se ganan en series largas de trades pequeños, no en uno grande.",autor_cita:"Ed Seykota"},
+  {tema:"Mentalidad de proceso",emoji:"🔄",titulo:"Enfócate en el proceso, no en el dinero",mensaje:"Cuando operas pensando en el dinero — en lo que podrías ganar o perder — tomas decisiones emocionales. Cuando operas pensando en seguir tu proceso, tomas decisiones técnicas.\n\nLos mejores traders han aprendido a desvincular el resultado monetario de la evaluación de sus trades. Un trade puede seguir el proceso perfectamente y perder. Eso es un trade exitoso para ellos.\n\nHoy juzga cada trade por la calidad del proceso, no por el resultado.",tip:"Al final del día, evalúa tus trades con una sola pregunta: ¿seguí mi plan? No: ¿cuánto gané o perdí?",cita:"Si cuidas las pérdidas, las ganancias se cuidan solas.",autor_cita:"Peter Lynch"},
+  {tema:"Confianza",emoji:"🦁",titulo:"La confianza se construye, no se tiene",mensaje:"La confianza real en trading no viene de creer que vas a ganar cada trade. Viene de saber que tienes un proceso probado y que puedes ejecutarlo con disciplina incluso cuando el mercado va en tu contra.\n\nSi has perdido confianza recientemente, no la busques en trades grandes. Búscala en volverte a comprometer con tu proceso, trade a trade, día a día.\n\nCada trade ejecutado correctamente — ganador o perdedor — reconstruye la confianza.",tip:"Haz un backtest rápido de tus últimos 10 trades. ¿Cuántos siguieron tu proceso? Eso te dirá dónde está realmente el problema.",cita:"La confianza viene del coraje de actuar bajo incertidumbre.",autor_cita:"Mark Douglas"},
+  {tema:"Sobretrading",emoji:"🚦",titulo:"Menos es más en el trading",mensaje:"El sobretrading es una de las causas más frecuentes de pérdida en traders retail. La plataforma siempre está abierta, el mercado siempre se mueve — pero eso no significa que siempre debes estar en él.\n\nCada trade extra que tomas sin setup real no solo te expone a pérdidas, sino que consume energía mental y emocional que necesitas para los trades buenos.\n\nCalidad sobre cantidad. Siempre.",tip:"Ponle un límite máximo de trades por día. Si no tienes setup después de ese límite, el día terminó para ti.",cita:"En los mercados, la actividad no se correlaciona con el rendimiento.",autor_cita:"Warren Buffett"},
+  {tema:"Aprendizaje continuo",emoji:"📚",titulo:"El mercado siempre tiene algo que enseñarte",mensaje:"Los traders que dejan de aprender son los que empiezan a estancarse. El mercado cambia, las condiciones cambian, y el trader que se adapta es el que sobrevive y prospera.\n\nCada pérdida es una lección pagada. La pregunta es si estás extrayendo el aprendizaje o simplemente sintiéndote mal por la pérdida. El dolor de una pérdida sin aprendizaje es la peor inversión que puedes hacer.\n\nHoy dedica tiempo a revisar tus trades de la semana con ojos de estudiante.",tip:"Lleva un diario de trading. No solo de números, sino de pensamientos y emociones. En 3 meses tendrás un mapa de tus patrones.",cita:"En mi experiencia, los mejores traders son los más estudiosos.",autor_cita:"Jack Schwager"},
+  {tema:"FOMO",emoji:"😤",titulo:"El trade que no tomaste no existe",mensaje:"El Fear Of Missing Out es uno de los venenos más potentes del trading. Ver como el precio va sin ti duele, y ese dolor hace que entres tarde, sin confirmación, en la peor parte del movimiento.\n\nLo que podrías haber ganado en ese trade que no tomaste no es dinero real. Es una fantasía. Y perseguir fantasías en el mercado siempre sale caro.\n\nEl próximo setup siempre existe. El mercado no se acaba.",tip:"Cuando sientas FOMO, escribe en papel: '¿Estoy entrando porque hay un setup o porque tengo miedo de quedarme fuera?' La honestidad duele menos que la pérdida.",cita:"El mejor trade que jamás tomé fue el que no tomé.",autor_cita:"Bruce Kovner"},
+  {tema:"Rutina",emoji:"⏰",titulo:"La rutina es tu ventaja competitiva",mensaje:"Los mercados son caóticos, pero tu preparación no tiene por qué serlo. Los traders que tienen rutinas sólidas — análisis pre-mercado, revisión post-trade, journaling — llegan a la sesión con más claridad y menos ruido mental.\n\nUna buena rutina reduce la carga cognitiva del trading. En vez de preguntarte qué hacer, ya sabes qué hacer. Esa certeza mental se traduce en menos errores de ejecución.\n\nHoy revisa tu rutina. ¿Tienes una? ¿La sigues?",tip:"Los primeros 30 minutos de tu día de trading deberían ser análisis, no ejecución. Entra al mercado preparado, no improvisando.",cita:"La victoria ama la preparación.",autor_cita:"Alexander Magno"},
+];
+
+function loadPsicologia(){
   const container=document.getElementById('psico-container');
   if(!container)return;
 
-  const today=new Date().toISOString().slice(0,10);
-  const cacheKey='tj_psico_'+today+'_'+currentAccount;
+  // Pick message by day of year — rotates through all messages
+  const now=new Date();
+  const start=new Date(now.getFullYear(),0,0);
+  const diff=now-start;
+  const dayOfYear=Math.floor(diff/(1000*60*60*24));
+  const idx=dayOfYear % PSICO_MSGS.length;
+  const msg=PSICO_MSGS[idx];
 
-  // Check cache — only generate once per day per account
-  try{
-    const cached=JSON.parse(localStorage.getItem(cacheKey));
-    if(cached){renderPsicologia(cached);return;}
-  }catch(e){}
-
-  // Show loading
-  container.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--text3)">
-    <i class="fa fa-brain fa-spin" style="font-size:36px;margin-bottom:16px;display:block;color:var(--green)"></i>
-    <div style="font-size:14px;margin-bottom:6px">Analizando tus trades recientes...</div>
-    <div style="font-size:12px">Generando tu mensaje personalizado con IA</div>
-  </div>`;
-
-  // Build trading context from recent trades
+  // Personalize with real stats
   const arr=accTrades();
-  const last7days=new Date();last7days.setDate(last7days.getDate()-7);
-  const recentTrades=arr.filter(t=>new Date(t.fecha)>=last7days);
   const s=calcStats(arr);
-  const sr=calcStats(recentTrades);
+  const last7=new Date();last7.setDate(last7.getDate()-7);
+  const recent=arr.filter(t=>new Date(t.fecha)>=last7);
+  const sr=calcStats(recent);
   const curAcc=accounts.find(a=>a.id===currentAccount);
 
-  const ctx=`Soy un trader. Aquí están mis estadísticas:
-- Cuenta: ${curAcc?.name||'Mi cuenta'} ($${curAcc?.balance?.toLocaleString()||0})
-- Total trades: ${s.total} | Win rate: ${s.winrate.toFixed(1)}% | P&L total: $${s.totalPnl.toFixed(0)}
-- Profit Factor: ${s.pf>=99?'∞':s.pf.toFixed(2)} | Max Drawdown: -$${s.maxDD.toFixed(0)}
-- Última semana: ${sr.total} trades | Win rate: ${sr.winrate.toFixed(1)}% | P&L: $${sr.totalPnl.toFixed(0)}
-- Mejor racha: +${s.bestStreak} | Peor racha: ${s.worstStreak}
-- Fecha de hoy: ${new Date().toLocaleDateString('es',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
-
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{
-          role:'user',
-          content:`${ctx}
-
-Eres un coach de psicología de trading. Basándote en mis estadísticas, genera un mensaje motivacional y psicológico personalizado para hoy.
-
-Devuelve SOLO un JSON con este formato exacto, sin texto adicional:
-{
-  "tema": "nombre corto del tema (ej: Disciplina, Paciencia, Gestión emocional...)",
-  "emoji": "un emoji que represente el tema",
-  "titulo": "título impactante de máx 8 palabras",
-  "mensaje": "mensaje motivacional de 3-4 párrafos, personalizado según mis stats. Dirígete a mí directamente. Menciona mis números reales. Sé honesto, directo y motivador.",
-  "tip": "un consejo práctico concreto para hoy de máx 2 oraciones",
-  "cita": "una cita famosa de un trader o inversor reconocido",
-  "autor_cita": "nombre del autor de la cita"
-}`
-        }]
-      })
-    });
-
-    const data=await res.json();
-    const text=data.content?.filter(c=>c.type==='text').map(c=>c.text).join('')||'';
-    const clean=text.replace(/```json|```/g,'').trim();
-    const jsonMatch=clean.match(/\{[\s\S]*\}/);
-    if(!jsonMatch)throw new Error('No JSON');
-    const msg=JSON.parse(jsonMatch[0]);
-
-    // Cache for today
-    localStorage.setItem(cacheKey,JSON.stringify(msg));
-    renderPsicologia(msg);
-
-  }catch(e){
-    container.innerHTML=`<div style="text-align:center;padding:40px;color:var(--red)">
-      <i class="fa fa-triangle-exclamation" style="font-size:28px;margin-bottom:12px;display:block"></i>
-      <div style="font-size:13px;margin-bottom:12px">No se pudo generar el mensaje. Verifica tu conexión.</div>
-      <button class="btn btn-ghost" onclick="localStorage.removeItem('${cacheKey}');loadPsicologia()">Reintentar</button>
-    </div>`;
-  }
-}
-
-function renderPsicologia(msg){
-  const container=document.getElementById('psico-container');
-  if(!container)return;
-  const today=new Date().toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const today=now.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   container.innerHTML=`
     <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
 
-      <!-- Header del día -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div style="font-size:12px;color:var(--text3);text-transform:capitalize">${today}</div>
-        <button class="btn btn-ghost" style="font-size:12px" onclick="refreshPsicologia()"><i class="fa fa-rotate"></i> Nuevo mensaje</button>
+      </div>
+
+      <!-- Stats rápidos -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Win Rate</div>
+          <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:${s.winrate>=60?'var(--green)':s.winrate>=40?'var(--amber)':'var(--red)'}">${s.winrate.toFixed(0)}%</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">P&L Total</div>
+          <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:${s.totalPnl>=0?'var(--green)':'var(--red)'}">${s.totalPnl>=0?'+':''}$${s.totalPnl.toFixed(0)}</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Esta semana</div>
+          <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:${sr.totalPnl>=0?'var(--green)':'var(--red)'}">${sr.totalPnl>=0?'+':''}$${sr.totalPnl.toFixed(0)}</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Trades</div>
+          <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--text)">${s.total}</div>
+        </div>
       </div>
 
       <!-- Mensaje principal -->
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative;overflow:hidden">
-        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green),var(--blue))"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)"></div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-          <span style="font-size:36px">${msg.emoji||'🧠'}</span>
+          <span style="font-size:36px">${msg.emoji}</span>
           <div>
-            <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px">${msg.tema||'Psicología'}</div>
-            <div style="font-size:20px;font-weight:700;line-height:1.3">${msg.titulo||'Mensaje del día'}</div>
+            <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px">${msg.tema}</div>
+            <div style="font-size:20px;font-weight:700;line-height:1.3">${msg.titulo}</div>
           </div>
         </div>
-        <div style="font-size:14px;color:var(--text2);line-height:1.8;white-space:pre-line">${msg.mensaje||''}</div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.8;white-space:pre-line">${msg.mensaje}</div>
       </div>
 
       <!-- Tip del día -->
@@ -2919,14 +2886,14 @@ function renderPsicologia(msg){
         <span style="font-size:20px;flex-shrink:0">💡</span>
         <div>
           <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:6px">Tip para hoy</div>
-          <div style="font-size:13px;color:var(--text);line-height:1.6">${msg.tip||''}</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.6">${msg.tip}</div>
         </div>
       </div>
 
       <!-- Cita -->
       <div style="background:var(--bg3);border-left:3px solid var(--blue);border-radius:0 12px 12px 0;padding:16px 20px">
-        <div style="font-size:14px;color:var(--text2);font-style:italic;line-height:1.7;margin-bottom:8px">"${msg.cita||''}"</div>
-        <div style="font-size:12px;color:var(--text3);font-weight:600">— ${msg.autor_cita||''}</div>
+        <div style="font-size:14px;color:var(--text2);font-style:italic;line-height:1.7;margin-bottom:8px">"${msg.cita}"</div>
+        <div style="font-size:12px;color:var(--text3);font-weight:600">— ${msg.autor_cita}</div>
       </div>
 
     </div>
@@ -2934,9 +2901,6 @@ function renderPsicologia(msg){
 }
 
 function refreshPsicologia(){
-  const today=new Date().toISOString().slice(0,10);
-  const cacheKey='tj_psico_'+today+'_'+currentAccount;
-  localStorage.removeItem(cacheKey);
   loadPsicologia();
 }
 
