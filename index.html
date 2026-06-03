@@ -962,8 +962,19 @@ const DEFAULT_ACCOUNTS=[
 ];
 
 async function loadData(){
-  // 1. SIEMPRE carga accounts desde DEFAULT_ACCOUNTS (código) — nunca desde la nube
-  accounts=DEFAULT_ACCOUNTS;
+  // 1. SIEMPRE carga accounts desde DEFAULT_ACCOUNTS filtrando las eliminadas
+  const deletedAccounts=new Set(getDeletedAccounts());
+  accounts=DEFAULT_ACCOUNTS.filter(a=>!deletedAccounts.has(a.id));
+  // Merge con cuentas personalizadas guardadas en localStorage
+  try{
+    const r=localStorage.getItem(SK_ACCOUNTS);
+    if(r){
+      const saved=JSON.parse(r);
+      // Add custom accounts not in DEFAULT and not deleted
+      saved.filter(a=>!DEFAULT_ACCOUNTS.find(d=>d.id===a.id)&&!deletedAccounts.has(a.id))
+           .forEach(a=>{accounts.push(a);});
+    }
+  }catch(e){}
   localStorage.setItem(SK_ACCOUNTS,JSON.stringify(accounts));
 
   // 2. IDs borrados — nunca vuelven a aparecer
@@ -1194,12 +1205,22 @@ function addAccount(){
   notify('Cuenta agregada');
 }
 
+function getDeletedAccounts(){
+  try{return JSON.parse(localStorage.getItem('tj_deleted_accounts')||'[]');}catch(e){return[];}
+}
+function addDeletedAccount(id){
+  const ids=getDeletedAccounts();
+  if(!ids.includes(id))ids.push(id);
+  localStorage.setItem('tj_deleted_accounts',JSON.stringify(ids));
+}
+
 function deleteAccount(id){
   if(accounts.length<=1){notify('Debes tener al menos una cuenta');return;}
-  if(!confirm('¿Eliminar esta cuenta y sus trades?'))return;
+  if(!confirm('¿Eliminar esta cuenta?'))return;
   accounts=accounts.filter(a=>a.id!==id);
   trades=trades.filter(t=>t.account!==id);
   if(currentAccount===id)currentAccount=accounts[0].id;
+  addDeletedAccount(id);
   saveAccounts();save();
   renderAccountSelect();
   renderAccountsList();
