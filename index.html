@@ -308,6 +308,7 @@ tbody tr:last-child td{border-bottom:none}
     <div class="nav-item" onclick="nav('calendario',this)"><i class="fa fa-calendar"></i> Calendario</div>
     <div class="nav-label" style="margin-top:12px">Análisis</div>
     <div class="nav-item" onclick="nav('analisis',this)"><i class="fa fa-chart-bar"></i> Estadísticas</div>
+    <div class="nav-item" onclick="nav('psicologia',this)"><i class="fa fa-brain"></i> Psicología</div>
     <div class="nav-label" style="margin-top:12px">Estrategia</div>
     <div class="nav-item" onclick="nav('crt',this)"><i class="fa fa-crosshairs"></i> Análisis pre entrada</div>
     <div class="nav-item" onclick="nav('ecocal',this)"><i class="fa fa-globe"></i> Calendario económico</div>
@@ -474,6 +475,16 @@ tbody tr:last-child td{border-bottom:none}
         <div class="card"><div class="card-title">Long vs Short</div><div class="chart-wrap h140"><canvas id="dirChart"></canvas></div></div>
         <div class="card"><div class="card-title">Stats avanzados</div><div class="stats-list" id="adv-stats"></div></div>
       </div>
+      <!-- Win rate por par -->
+      <div class="card">
+        <div class="card-title">Win rate por par</div>
+        <div id="wr-par-list"></div>
+      </div>
+      <!-- Win rate semanal -->
+      <div class="card">
+        <div class="card-title">Win rate semanal</div>
+        <div id="wr-semanal-list"></div>
+      </div>
     </div>
 
     <!-- ─── CRT STRATEGY ─── -->
@@ -584,7 +595,15 @@ tbody tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- ─── CALENDARIO ECONÓMICO ─── -->
+    <!-- ─── PSICOLOGÍA ─── -->
+    <div id="view-psicologia" class="view">
+      <div id="psico-container">
+        <div style="text-align:center;padding:60px 20px;color:var(--text3)">
+          <i class="fa fa-brain" style="font-size:40px;margin-bottom:16px;display:block;opacity:.3"></i>
+          <div style="font-size:14px">Cargando mensaje del día...</div>
+        </div>
+      </div>
+    </div>
     <div id="view-ecocal" class="view">
       <div style="margin-bottom:16px">
         <div style="font-size:16px;font-weight:700">Calendario Económico</div>
@@ -1215,12 +1234,13 @@ function nav(v,el){
   document.querySelectorAll('.view').forEach(i=>i.classList.remove('active'));
   const vEl=document.getElementById('view-'+v);
   if(vEl)vEl.classList.add('active');
-  const titles={dashboard:'Dashboard',nuevo:'Nueva Operación',historial:'Historial',calendario:'Calendario P&L',analisis:'Estadísticas',crt:'Análisis pre entrada',ecocal:'Calendario Económico',importar:'Importar datos',cuentas:'Gestionar Cuentas'};
+  const titles={dashboard:'Dashboard',nuevo:'Nueva Operación',historial:'Historial',calendario:'Calendario P&L',analisis:'Estadísticas',psicologia:'Psicología del Trading',crt:'Análisis pre entrada',ecocal:'Calendario Económico',importar:'Importar datos',cuentas:'Gestionar Cuentas'};
   document.getElementById('topbar-title').textContent=titles[v]||v;
   if(v==='dashboard')renderDashboard();
   if(v==='historial')renderHistorial();
   if(v==='calendario')renderCalendario();
   if(v==='analisis')renderAnalisis();
+  if(v==='psicologia')loadPsicologia();
   if(v==='crt'){crtInit();loadCRT2();renderCRT();}
   if(v==='ecocal')loadEconomicCalendar();
   if(v==='cuentas')renderAccountsList();
@@ -1697,6 +1717,67 @@ function renderAnalisis(){
   mkChart('dirChart',{type:'doughnut',data:{labels:['Long','Short'],datasets:[{data:[byDir.Long.total,byDir.Short.total],backgroundColor:['#00d4aa','#ff4d6a'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:cc.textColor,font:{size:11},boxWidth:10}}},cutout:'60%'}});
   const s=calcStats(arr);const exp=(s.winrate/100)*s.avgWin-((1-s.winrate/100)*s.avgLoss);
   document.getElementById('adv-stats').innerHTML=`<div class="item"><span>Expectativa matemática</span><span style="color:${exp>=0?'var(--green)':'var(--red)'}">$${exp.toFixed(2)}</span></div><div class="item"><span>Avg ganancia</span><span style="color:var(--green)">$${s.avgWin.toFixed(0)}</span></div><div class="item"><span>Avg pérdida</span><span style="color:var(--red)">-$${s.avgLoss.toFixed(0)}</span></div><div class="item"><span>R:R promedio</span><span>${s.avgRR.toFixed(2)}</span></div><div class="item"><span>Profit Factor</span><span style="color:${s.pf>=1.5?'var(--green)':s.pf<1?'var(--red)':'var(--amber)'}">${s.pf>=99?'∞':s.pf.toFixed(2)}</span></div><div class="item"><span>Mejor racha ganadora</span><span style="color:var(--green)">+${s.bestStreak}</span></div><div class="item"><span>Peor racha perdedora</span><span style="color:var(--red)">${s.worstStreak}</span></div>`;
+
+  // ── WIN RATE POR PAR ──
+  const byPar={};
+  arr.forEach(t=>{
+    if(!byPar[t.activo])byPar[t.activo]={total:0,wins:0,losses:0,pnl:0};
+    byPar[t.activo].total++;
+    byPar[t.activo].pnl+=Number(t.pnl);
+    if(t.pnl>0)byPar[t.activo].wins++;
+    else if(t.pnl<0)byPar[t.activo].losses++;
+  });
+  const parSort=Object.entries(byPar).sort((a,b)=>b[1].total-a[1].total);
+  const rowStyle='display:grid;grid-template-columns:100px 50px 50px 50px 1fr 60px;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px';
+  const headStyle='display:grid;grid-template-columns:100px 50px 50px 50px 1fr 60px;gap:10px;padding:8px 14px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;background:var(--bg3);border-bottom:1px solid var(--border)';
+  document.getElementById('wr-par-list').innerHTML=
+    `<div style="${headStyle}"><span>Par</span><span>Trades</span><span style="color:var(--green)">Wins</span><span style="color:var(--red)">Losses</span><span>Win Rate</span><span style="text-align:right">%</span></div>`+
+    parSort.map(([par,v])=>{
+      const wr=v.total?(v.wins/v.total)*100:0;
+      const barColor=wr>=60?'var(--green)':wr>=40?'var(--amber)':'var(--red)';
+      const wrColor=wr>=60?'var(--green)':wr>=40?'var(--amber)':'var(--red)';
+      return `<div style="${rowStyle}">
+        <span style="font-weight:600">${par}</span>
+        <span>${v.total}</span>
+        <span style="color:var(--green);font-weight:500">${v.wins}</span>
+        <span style="color:var(--red);font-weight:500">${v.losses}</span>
+        <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;width:${wr.toFixed(0)}%;background:${barColor};transition:width .5s"></div></div>
+        <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:${wrColor};text-align:right">${wr.toFixed(1)}%</span>
+      </div>`;
+    }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">Sin trades</div>';
+
+  // ── WIN RATE SEMANAL ──
+  const byWeek={};
+  arr.forEach(t=>{
+    const d=new Date(t.fecha+'T12:00:00');
+    const day=d.getDay();
+    const monday=new Date(d);monday.setDate(d.getDate()-(day===0?6:day-1));
+    const weekKey=monday.toISOString().slice(0,10);
+    if(!byWeek[weekKey])byWeek[weekKey]={total:0,wins:0,losses:0,pnl:0,label:monday.toLocaleDateString('es',{day:'numeric',month:'short'})};
+    byWeek[weekKey].total++;byWeek[weekKey].pnl+=Number(t.pnl);
+    if(t.pnl>0)byWeek[weekKey].wins++;
+    else if(t.pnl<0)byWeek[weekKey].losses++;
+  });
+  const weekSort=Object.entries(byWeek).sort((a,b)=>b[0].localeCompare(a[0]));
+  const rowStyle2='display:grid;grid-template-columns:110px 50px 50px 50px 1fr 60px 80px;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px';
+  const headStyle2='display:grid;grid-template-columns:110px 50px 50px 50px 1fr 60px 80px;gap:10px;padding:8px 14px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;background:var(--bg3);border-bottom:1px solid var(--border)';
+  document.getElementById('wr-semanal-list').innerHTML=
+    `<div style="${headStyle2}"><span>Semana</span><span>Trades</span><span style="color:var(--green)">Wins</span><span style="color:var(--red)">Losses</span><span>Win Rate</span><span style="text-align:right">%</span><span style="text-align:right">P&L</span></div>`+
+    weekSort.map(([key,v])=>{
+      const wr=v.total?(v.wins/v.total)*100:0;
+      const barColor=wr>=60?'var(--green)':wr>=40?'var(--amber)':'var(--red)';
+      const wrColor=wr>=60?'var(--green)':wr>=40?'var(--amber)':'var(--red)';
+      const pnlColor=v.pnl>=0?'var(--green)':'var(--red)';
+      return `<div style="${rowStyle2}">
+        <span style="font-size:11px;color:var(--text2)">Sem ${v.label}</span>
+        <span>${v.total}</span>
+        <span style="color:var(--green);font-weight:500">${v.wins}</span>
+        <span style="color:var(--red);font-weight:500">${v.losses}</span>
+        <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;width:${wr.toFixed(0)}%;background:${barColor};transition:width .5s"></div></div>
+        <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:${wrColor};text-align:right">${wr.toFixed(1)}%</span>
+        <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:${pnlColor};text-align:right">${v.pnl>=0?'+':''}$${v.pnl.toFixed(0)}</span>
+      </div>`;
+    }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">Sin trades</div>';
 }
 
 
@@ -2718,6 +2799,145 @@ function saveCRT2(){
 
 function loadCRT2(){
   try{const r=localStorage.getItem('tj_crt2_v1');if(r){const p=JSON.parse(r);crtS=p.s||{};crtSnaps=p.snaps||[];}}catch(e){}
+}
+
+// ══════════════════════════════════════════
+// PSICOLOGÍA DEL TRADING
+// ══════════════════════════════════════════
+async function loadPsicologia(){
+  const container=document.getElementById('psico-container');
+  if(!container)return;
+
+  const today=new Date().toISOString().slice(0,10);
+  const cacheKey='tj_psico_'+today+'_'+currentAccount;
+
+  // Check cache — only generate once per day per account
+  try{
+    const cached=JSON.parse(localStorage.getItem(cacheKey));
+    if(cached){renderPsicologia(cached);return;}
+  }catch(e){}
+
+  // Show loading
+  container.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--text3)">
+    <i class="fa fa-brain fa-spin" style="font-size:36px;margin-bottom:16px;display:block;color:var(--green)"></i>
+    <div style="font-size:14px;margin-bottom:6px">Analizando tus trades recientes...</div>
+    <div style="font-size:12px">Generando tu mensaje personalizado con IA</div>
+  </div>`;
+
+  // Build trading context from recent trades
+  const arr=accTrades();
+  const last7days=new Date();last7days.setDate(last7days.getDate()-7);
+  const recentTrades=arr.filter(t=>new Date(t.fecha)>=last7days);
+  const s=calcStats(arr);
+  const sr=calcStats(recentTrades);
+  const curAcc=accounts.find(a=>a.id===currentAccount);
+
+  const ctx=`Soy un trader. Aquí están mis estadísticas:
+- Cuenta: ${curAcc?.name||'Mi cuenta'} ($${curAcc?.balance?.toLocaleString()||0})
+- Total trades: ${s.total} | Win rate: ${s.winrate.toFixed(1)}% | P&L total: $${s.totalPnl.toFixed(0)}
+- Profit Factor: ${s.pf>=99?'∞':s.pf.toFixed(2)} | Max Drawdown: -$${s.maxDD.toFixed(0)}
+- Última semana: ${sr.total} trades | Win rate: ${sr.winrate.toFixed(1)}% | P&L: $${sr.totalPnl.toFixed(0)}
+- Mejor racha: +${s.bestStreak} | Peor racha: ${s.worstStreak}
+- Fecha de hoy: ${new Date().toLocaleDateString('es',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{
+          role:'user',
+          content:`${ctx}
+
+Eres un coach de psicología de trading. Basándote en mis estadísticas, genera un mensaje motivacional y psicológico personalizado para hoy.
+
+Devuelve SOLO un JSON con este formato exacto, sin texto adicional:
+{
+  "tema": "nombre corto del tema (ej: Disciplina, Paciencia, Gestión emocional...)",
+  "emoji": "un emoji que represente el tema",
+  "titulo": "título impactante de máx 8 palabras",
+  "mensaje": "mensaje motivacional de 3-4 párrafos, personalizado según mis stats. Dirígete a mí directamente. Menciona mis números reales. Sé honesto, directo y motivador.",
+  "tip": "un consejo práctico concreto para hoy de máx 2 oraciones",
+  "cita": "una cita famosa de un trader o inversor reconocido",
+  "autor_cita": "nombre del autor de la cita"
+}`
+        }]
+      })
+    });
+
+    const data=await res.json();
+    const text=data.content?.filter(c=>c.type==='text').map(c=>c.text).join('')||'';
+    const clean=text.replace(/```json|```/g,'').trim();
+    const jsonMatch=clean.match(/\{[\s\S]*\}/);
+    if(!jsonMatch)throw new Error('No JSON');
+    const msg=JSON.parse(jsonMatch[0]);
+
+    // Cache for today
+    localStorage.setItem(cacheKey,JSON.stringify(msg));
+    renderPsicologia(msg);
+
+  }catch(e){
+    container.innerHTML=`<div style="text-align:center;padding:40px;color:var(--red)">
+      <i class="fa fa-triangle-exclamation" style="font-size:28px;margin-bottom:12px;display:block"></i>
+      <div style="font-size:13px;margin-bottom:12px">No se pudo generar el mensaje. Verifica tu conexión.</div>
+      <button class="btn btn-ghost" onclick="localStorage.removeItem('${cacheKey}');loadPsicologia()">Reintentar</button>
+    </div>`;
+  }
+}
+
+function renderPsicologia(msg){
+  const container=document.getElementById('psico-container');
+  if(!container)return;
+  const today=new Date().toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  container.innerHTML=`
+    <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+
+      <!-- Header del día -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-size:12px;color:var(--text3);text-transform:capitalize">${today}</div>
+        <button class="btn btn-ghost" style="font-size:12px" onclick="refreshPsicologia()"><i class="fa fa-rotate"></i> Nuevo mensaje</button>
+      </div>
+
+      <!-- Mensaje principal -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green),var(--blue))"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <span style="font-size:36px">${msg.emoji||'🧠'}</span>
+          <div>
+            <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px">${msg.tema||'Psicología'}</div>
+            <div style="font-size:20px;font-weight:700;line-height:1.3">${msg.titulo||'Mensaje del día'}</div>
+          </div>
+        </div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.8;white-space:pre-line">${msg.mensaje||''}</div>
+      </div>
+
+      <!-- Tip del día -->
+      <div style="background:var(--green2);border:1px solid var(--green3);border-radius:12px;padding:16px 20px;display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:20px;flex-shrink:0">💡</span>
+        <div>
+          <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:6px">Tip para hoy</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.6">${msg.tip||''}</div>
+        </div>
+      </div>
+
+      <!-- Cita -->
+      <div style="background:var(--bg3);border-left:3px solid var(--blue);border-radius:0 12px 12px 0;padding:16px 20px">
+        <div style="font-size:14px;color:var(--text2);font-style:italic;line-height:1.7;margin-bottom:8px">"${msg.cita||''}"</div>
+        <div style="font-size:12px;color:var(--text3);font-weight:600">— ${msg.autor_cita||''}</div>
+      </div>
+
+    </div>
+  `;
+}
+
+function refreshPsicologia(){
+  const today=new Date().toISOString().slice(0,10);
+  const cacheKey='tj_psico_'+today+'_'+currentAccount;
+  localStorage.removeItem(cacheKey);
+  loadPsicologia();
 }
 
 // ══════════════════════════════════════════
